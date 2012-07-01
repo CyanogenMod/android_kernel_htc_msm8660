@@ -2938,7 +2938,6 @@ static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
 	.wakeup_irq = MSM_GPIO_TO_INT(RUBY_GPIO_BT_UART1_RX),
 	.inject_rx_on_wakeup = 1,
 	.rx_to_inject = 0x32,
-	.cpu_lock_supported = 1,
 };
 #endif
 
