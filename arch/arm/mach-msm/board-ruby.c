@@ -2665,7 +2665,7 @@ static void __init msm8x60_init_dsps(void)
 #define MSM_FB_SIZE roundup(MSM_FB_PRIM_BUF_SIZE + 0x313800 + MSM_FB_DSUB_PMEM_ADDER, 4096)
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL */
 
-#define MSM_PMEM_SF_SIZE			0x1000000 /* 16 Mbytes */
+#define MSM_PMEM_SF_SIZE			0x2000000 /* 32 Mbytes */
 #define MSM_OVERLAY_BLT_SIZE   roundup(960 * ALIGN(540, 32) * 3 * 2, 4096)
 
 #define MSM_PMEM_ADSP_SIZE		  0x2F00000
