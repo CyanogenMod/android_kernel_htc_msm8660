@@ -70,4 +70,3 @@ obj-$(CONFIG_WCNSS_CORE)	+= wcnss/
 obj-$(CONFIG_QUALCOMM_WLAN)        += qualcomm_wlan/prima/CORE/HDD/src/
 
 obj-$(CONFIG_BCM4329_248)	+= bcm4329_248/
-obj-$(CONFIG_BCM4330B2)   += bcm4330b2/
