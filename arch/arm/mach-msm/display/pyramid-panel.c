@@ -472,11 +472,11 @@ static struct lcdc_platform_data lcdc_pdata = {
 int pyd_esd_fixup(uint32_t mfd_data)
 {
 	/* do two read_scan_line consecutively to avoid flicking */
-	if (mipi_novatek_read_scan_line(mfd_data) == 0xf7ff) {
+	if (mipi_novatek_read_scan_line() == 0xf7ff) {
 		hr_msleep(1);
-		if (mipi_novatek_read_scan_line(mfd_data) == 0xf7ff) {
+		if (mipi_novatek_read_scan_line() == 0xf7ff) {
 			pr_info("%s\n", __func__);
-			mipi_novatek_restart_vcounter(mfd_data);
+			mipi_novatek_restart_vcounter();
 		}
 	}
 
@@ -1237,10 +1237,12 @@ int __init pyd_init_panel(struct resource *res, size_t size)
 	else
 		mipi_novatek_panel_data.shrink_pwm = pyd_auo_shrink_pwm;
 
+#if 0
 	if (panel_type == PANEL_ID_PYD_SHARP)
 		mdp_pdata.color_enhancment_tbl = pyd_sharp_gamma;
 	else
 		mdp_pdata.color_enhancment_tbl = pyd_auo_gamma;
+#endif
 
 	msm_fb_device.resource = res;
 	msm_fb_device.num_resources = size;
