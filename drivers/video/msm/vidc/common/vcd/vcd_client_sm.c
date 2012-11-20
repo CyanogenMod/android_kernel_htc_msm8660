@@ -1569,6 +1569,9 @@ void vcd_do_client_state_transition(struct vcd_clnt_ctxt *cctxt,
 			      cctxt, to_state);
 	}
 
+	if (!cctxt)
+		return;
+
 	state_ctxt = &cctxt->clnt_state;
 
 	/* HTC_START (klockwork issue)*/

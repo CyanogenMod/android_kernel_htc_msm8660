@@ -14,7 +14,7 @@ config SENSORS_ONLY_BMA250
 	  BMA250 ONLY G-sensor Driver implemented by HTC.
 
 config SENSORS_I2C_AK_BMA250
-	tristate "BMA250 acceleration sensor support(SH)"
+	tristate "BMA250 acceleration sensor without AKM support(SH)"
 	depends on I2C=y
 	help
 	 BMA250 ONLY G-sensor Driver implemented by HTC.
@@ -114,5 +114,11 @@ config CODEC_AIC3254
 	depends on I2C=y
 	help
 	  AIC3254 Driver implemented by HTC.
+
+config CODEC_AIC3008
+	tristate "Codec AIC3008 support"
+	depends on I2C=y
+	help
+	  AIC3008 Driver implemented by HTC.
 
 endmenu

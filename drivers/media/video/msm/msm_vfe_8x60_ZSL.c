@@ -3061,6 +3061,25 @@ static void vfe31_process_error_irq(uint32_t errStatus)
 	vfe31_put_ch_pong_addr((chn), (addr)) : \
 	vfe31_put_ch_ping_addr((chn), (addr)))
 
+
+/* Check flags for irq */
+#define Check_flags_out0 \
+	((1 << (vfe31_ctrl->outpath.out0.ch0)) | (1 << (vfe31_ctrl->outpath.out0.ch1)))
+#define Check_flags_out1 \
+	((1 << (vfe31_ctrl->outpath.out1.ch0)) | (1 << (vfe31_ctrl->outpath.out1.ch1)))
+#define Check_flags_out2 \
+	((1 << (vfe31_ctrl->outpath.out2.ch0)) | (1 << (vfe31_ctrl->outpath.out2.ch1)))
+
+/* Counter for ppStatus error */
+static bool flag_ppStatusErr_0_ZSL = FALSE;
+static bool flag_ppStatusErr_1_ZSL = FALSE;
+static bool flag_ppStatusErr_2_ZSL = FALSE;
+static bool flag_ppStatusErr_0 = FALSE;
+static bool flag_ppStatusErr_1 = FALSE;
+static bool flag_ppStatusErr_2 = FALSE;
+
+
+
 static void vfe31_process_output_path_irq_0_zsl(void)
 {
 	uint32_t ping_pong;
@@ -3073,6 +3092,16 @@ static void vfe31_process_output_path_irq_0_zsl(void)
 		if (vfe31_ctrl->outpath.out0.free_buf.available) {
 			ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 				VFE_BUS_PING_PONG_STATUS);
+
+		CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+		/* Ensure that both wm0 and wm4 ping and pong buffers are active*/
+		if (!(((ping_pong & Check_flags_out0) == Check_flags_out0) ||
+			((ping_pong & Check_flags_out0) == 0x0))) {
+			pr_err(" Irq_0_zsl - skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", ping_pong);
+			flag_ppStatusErr_0_ZSL = TRUE;
+			return;
+		}
 
 		/* Y channel */
 		pyaddr = vfe31_get_ch_addr(ping_pong,
@@ -3119,6 +3148,16 @@ static void vfe31_process_snapshot_frame(void)
 	ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 		VFE_BUS_PING_PONG_STATUS);
 
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out1) == Check_flags_out1) ||
+		((ping_pong & Check_flags_out1) == 0x0))) {
+		pr_err("[CAM]%s: Irq_1_zsl(out1)- skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", __func__, ping_pong);
+		flag_ppStatusErr_1_ZSL = TRUE;
+		return;
+	}
+
+
 	/* Y channel- Main Image */
 	pyaddr = vfe31_get_ch_addr(ping_pong,
 		vfe31_ctrl->outpath.out1.ch0);
@@ -3142,6 +3181,17 @@ static void vfe31_process_snapshot_frame(void)
 		vfe31_ctrl->outpath.out1.free_buf.available = 0;
 	}
 	 vfe_send_outmsg(MSG_ID_OUTPUT_S, pyaddr, pcbcraddr);
+
+
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out0) == Check_flags_out0) ||
+		((ping_pong & Check_flags_out0) == 0x0))) {
+		pr_err("[CAM]%s: Irq_1_zsl(out0)- skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", __func__, ping_pong);
+		flag_ppStatusErr_1_ZSL = TRUE;
+		return;
+	}
+
 
 	/* Y channel- TN Image */
 	pyaddr = vfe31_get_ch_addr(ping_pong,
@@ -3201,6 +3251,17 @@ static void vfe31_process_raw_snapshot_frame(void)
 	ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 		VFE_BUS_PING_PONG_STATUS);
 
+
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out1) == Check_flags_out1) ||
+		((ping_pong & Check_flags_out1) == 0x0))) {
+		pr_err("[CAM]%s: Irq_1_zsl(out1)- skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", __func__, ping_pong);
+		flag_ppStatusErr_1_ZSL = TRUE;
+		return;
+	}
+
+
 	/* Y channel- Main Image */
 	pyaddr = vfe31_get_ch_addr(ping_pong,
 		vfe31_ctrl->outpath.out1.ch0);
@@ -3254,6 +3315,16 @@ static void vfe31_process_zsl_frame(void)
 	ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 		VFE_BUS_PING_PONG_STATUS);
 
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out2) == Check_flags_out2) ||
+		((ping_pong & Check_flags_out2) == 0x0))) {
+		pr_err("[CAM]%s: Irq_1_zsl(out2)- skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", __func__, ping_pong);
+		flag_ppStatusErr_1_ZSL = TRUE;
+		return;
+	}
+
+
 	/* Y channel- Main Image */
 	pyaddr = vfe31_get_ch_addr(ping_pong,
 		vfe31_ctrl->outpath.out2.ch0);
@@ -3277,6 +3348,17 @@ static void vfe31_process_zsl_frame(void)
 		vfe31_ctrl->outpath.out2.free_buf.available = 0;
 	}
 	 vfe_send_outmsg(MSG_ID_OUTPUT_S, pyaddr, pcbcraddr);
+
+
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out1) == Check_flags_out1) ||
+		((ping_pong & Check_flags_out1) == 0x0))) {
+		pr_err("[CAM]%s: Irq_1_zsl(out1)- skip the frame pp_status is not proper"
+				"PP_status = 0x%x\n", __func__, ping_pong);
+		flag_ppStatusErr_1_ZSL = TRUE;
+		return;
+	}
+
 
 	/* Y channel- TN Image */
 	pyaddr = vfe31_get_ch_addr(ping_pong,
@@ -3350,6 +3432,16 @@ static void vfe31_process_output_path_irq_2_zsl(void)
 			ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 				VFE_BUS_PING_PONG_STATUS);
 
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	/* Ensure that both wm1 and wm5 ping and pong buffers are active*/
+	if (!(((ping_pong & Check_flags_out2) == Check_flags_out2) ||
+		((ping_pong & Check_flags_out2) == 0x0))) {
+		pr_err(" Irq_2_zsl - skip the frame pp_status is not proper"
+			"PP_status = 0x%x\n", ping_pong);
+		flag_ppStatusErr_2_ZSL = TRUE;
+		return;
+	}
+
 			/* Y channel */
 			pyaddr = vfe31_get_ch_addr(ping_pong,
 				vfe31_ctrl->outpath.out2.ch0);
@@ -3411,6 +3503,16 @@ static void vfe31_process_output_path_irq_0(void)
 	if (out_bool) {
 		ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 			VFE_BUS_PING_PONG_STATUS);
+
+	/* Ensure that both wm0 and wm4 ping and pong buffers are active*/
+	if (!(((ping_pong & Check_flags_out0) == Check_flags_out0) ||
+		((ping_pong & Check_flags_out0) == 0x0))) {
+		pr_err(" Irq_0 - skip the frame pp_status is not proper"
+			"PP_status = 0x%x\n", ping_pong);
+		flag_ppStatusErr_0 = TRUE;
+		return;
+	}
+
 
 		/* Y channel */
 		pyaddr = vfe31_get_ch_addr(ping_pong,
@@ -3478,6 +3580,15 @@ static void vfe31_process_output_path_irq_1(void)
 			ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 				VFE_BUS_PING_PONG_STATUS);
 
+	CDBG("%s, ping_pong = 0x%x \n", __func__, ping_pong);
+	if (!(((ping_pong & Check_flags_out1) == Check_flags_out1) ||
+		((ping_pong & Check_flags_out1) == 0x0))) {
+		pr_err(" Irq_1 - skip the frame pp_status is not proper"
+			"PP_status = 0x%x\n", ping_pong);
+		flag_ppStatusErr_1 = TRUE;
+		return;
+	}
+
 			/* Y channel */
 			pyaddr = vfe31_get_ch_addr(ping_pong,
 				vfe31_ctrl->outpath.out1.ch0);
@@ -3541,6 +3652,14 @@ static void vfe31_process_output_path_irq_2(void)
 	if (out_bool) {
 			ping_pong = msm_io_r(vfe31_ctrl->vfebase +
 				VFE_BUS_PING_PONG_STATUS);
+
+	if (!(((ping_pong & Check_flags_out2) == Check_flags_out2) ||
+		((ping_pong & Check_flags_out2) == 0x0))) {
+		pr_err(" Irq_2 - skip the frame pp_status is not proper"
+			"PP_status = 0x%x\n", ping_pong);
+		flag_ppStatusErr_2 = TRUE;
+		return;
+	}
 
 			/* Y channel */
 			pyaddr = vfe31_get_ch_addr(ping_pong,
@@ -4190,6 +4309,19 @@ static int vfe31_init(struct msm_vfe_callback *presp,
 	camio_clk = camdev->ioclk;
 
 	rc = vfe31_resource_init(presp, pdev, vfe_syncdata);
+	/* Check whether there is ever happened y/cbcr miss match case*/
+	if (flag_ppStatusErr_0_ZSL != FALSE || flag_ppStatusErr_0 != FALSE ||
+		flag_ppStatusErr_1_ZSL != FALSE || flag_ppStatusErr_1 != FALSE ||
+		flag_ppStatusErr_2_ZSL != FALSE || flag_ppStatusErr_2 != FALSE) {
+		pr_info("flag_ppStatusErr: irq0_ZSL:%d irq1_ZSL:%d irq2_ZSL:%d irq0:%d irq1:%d irq2:%d",
+			flag_ppStatusErr_0_ZSL,
+			flag_ppStatusErr_1_ZSL,
+			flag_ppStatusErr_2_ZSL,
+			flag_ppStatusErr_0,
+			flag_ppStatusErr_1,
+			flag_ppStatusErr_2);
+	}
+
 	if (rc < 0)
 		return rc;
 	/* Bring up all the required GPIOs and Clocks */

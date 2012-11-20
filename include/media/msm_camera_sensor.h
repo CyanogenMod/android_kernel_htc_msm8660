@@ -73,7 +73,8 @@
 #else
 #ifdef CONFIG_RAWCHIP
 #define CFG_SET_EXP_GAIN_YUSHAN	54
-#define CFG_MAX        	        55
+#define CFG_GET_CUR_STEPS      55
+#define CFG_MAX        	        56
 #endif
 #endif
 
@@ -130,6 +131,7 @@ struct focus_cfg {
 	int fine_delay;
 	int step_dir;
 	int init_code_offset_max;
+	uint16_t curr_steps;
 };
 
 struct fps_cfg {
@@ -359,17 +361,17 @@ enum bestshot_mode {
   BESTSHOT_SNOW,
   BESTSHOT_BEACH,
   BESTSHOT_SUNSET,
-  BESTSHOT_NIGHT,
+  BESTSHOT_NIGHT, /*5*/
   BESTSHOT_PORTRAIT,
   BESTSHOT_BACKLIGHT,
   BESTSHOT_SPORTS,
   BESTSHOT_ANTISHAKE,
-  BESTSHOT_FLOWERS,
+  BESTSHOT_FLOWERS, /*10*/
   BESTSHOT_CANDLELIGHT,
   BESTSHOT_FIREWORKS,
   BESTSHOT_PARTY,
   BESTSHOT_NIGHT_PORTRAIT,
-  BESTSHOT_THEATRE,
+  BESTSHOT_THEATRE, /*15*/
   BESTSHOT_ACTION,
   BESTSHOT_AR,
   BESTSHOT_MAX

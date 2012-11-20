@@ -230,7 +230,7 @@ static void print_active_locks(int type)
 	}
 }
 
-#ifdef CONFIG_ARCH_MSM8X60_LTE
+#if defined(CONFIG_ARCH_MSM8X60_LTE) || defined(CONFIG_ARCH_MSM7X27)
 void htc_print_active_wake_locks(int type)
 {
 	struct wake_lock *lock;

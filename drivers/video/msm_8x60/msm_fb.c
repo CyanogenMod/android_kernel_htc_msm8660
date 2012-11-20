@@ -1130,7 +1130,7 @@ static int msm_fb_get_lut(struct fb_info *info, void __user *p)
 		return -EFAULT;
 	}
 
-	ret = mfd->get_gamma_curvy(mfd->mdp_pdata->abl_gamma_tbl, &gc, mfd->mdp_pdata->color_enhancment_tbl);
+	ret = mfd->get_gamma_curvy(mfd->mdp_pdata->abl_gamma_tbl, &gc);
 
 	if (ret)
 		return ret;

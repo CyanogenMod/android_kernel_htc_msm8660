@@ -1693,21 +1693,18 @@ static struct dsi_cmd_desc novatek_restart_vcounter_cmd[] = {
 		sizeof(peripheral_off), peripheral_off}
 };
 
-int mipi_novatek_restart_vcounter(uint32_t mfd)
+int mipi_novatek_restart_vcounter(void)
 {
 	uint32 dma_ctrl;
-	mutex_lock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
+
 	/* DSI_COMMAND_MODE_DMA_CTRL */
 	dma_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x38);
 	/* PR_DISP_INFO("%s+ dma_ctrl=0x%x\n", __func__, dma_ctrl); */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);
-	mutex_unlock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
 	mipi_dsi_op_mode_config(DSI_CMD_MODE);
 	mipi_dsi_cmds_tx(&novatek_tx_buf, novatek_restart_vcounter_cmd,
 			ARRAY_SIZE(novatek_restart_vcounter_cmd));
-	mutex_lock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x38, dma_ctrl);
-	mutex_unlock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
 	/* PR_DISP_INFO("%s-\n", __func__); */
 	return 0;
 }
@@ -1716,23 +1713,34 @@ static char read_scan_line[2] = {0x45, 0x00}; /* DTYPE_DCS_READ */
 static struct dsi_cmd_desc read_scan_line_cmd = {
 	DTYPE_DCS_READ, 1, 0, 1, 0, sizeof(read_scan_line), read_scan_line};
 
-uint32 mipi_novatek_read_scan_line(uint32_t mfd)
+uint32 mipi_novatek_read_scan_line(void)
 {
 	struct dsi_cmd_desc *cmd;
 	uint32 dma_ctrl;
-	mutex_lock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
+
 	/* DSI_COMMAND_MODE_DMA_CTRL */
 	dma_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x38);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);
-	mutex_unlock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
 	mipi_dsi_buf_init(&novatek_rx_buf);
 	mipi_dsi_buf_init(&novatek_rx_buf);
 
 	cmd = &read_scan_line_cmd;
 	mipi_dsi_cmds_rx(&novatek_tx_buf, &novatek_rx_buf, cmd, 4);
-	mutex_lock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x38, dma_ctrl);
-	mutex_unlock(&((struct msm_fb_data_type *)mfd)->dma->ov_mutex);
+#if 0
+	{
+		int i;
+		char *cp;
+
+		cp = (char *)novatek_rx_buf.data;
+		PR_DISP_INFO("rx-data: ");
+		for (i = 0; i < novatek_rx_buf.len; i++, cp++)
+			PR_DISP_INFO("%x ", *cp);
+		PR_DISP_INFO("\n");
+	}
+	PR_DISP_INFO("%s: read_scan_line=%x\n", __func__,
+		(uint32 *)novatek_rx_buf.data);
+#endif
 	return *((uint32 *)novatek_rx_buf.data);
 }
 
@@ -2108,7 +2116,7 @@ static int mipi_novatek_lcd_off(struct platform_device *pdev)
 		/* For ESD fixup */
 		if (mfd->esd_fixup) {
 			mipi_dsi_cmd_bta_sw_trigger();
-			mipi_novatek_read_scan_line((uint32_t) mfd);
+			mipi_novatek_read_scan_line();
 		}
 
 		mipi_dsi_cmds_tx(&novatek_tx_buf, mipi_power_off_cmd,
@@ -2144,7 +2152,7 @@ static int mipi_dsi_set_backlight(struct msm_fb_data_type *mfd)
 	if (mipi->mode == DSI_VIDEO_MODE) {
 		mipi_dsi_cmd_mode_ctrl(1);	/* enable cmd mode */
 		mipi_dsi_cmds_tx(&novatek_tx_buf, novatek_cmd_backlight_cmds,
-		ARRAY_SIZE(novatek_cmd_backlight_cmds));
+			ARRAY_SIZE(novatek_cmd_backlight_cmds));
 		mipi_dsi_cmd_mode_ctrl(0);	/* disable cmd mode */
 	} else {
 		mipi_dsi_op_mode_config(DSI_CMD_MODE);

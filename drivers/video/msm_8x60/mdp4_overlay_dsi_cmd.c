@@ -825,15 +825,8 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 			mdp4_overlay_handle_padding(mfd, true);
 	}
 
-	if (mfd->esd_fixup) {
-		mutex_lock(&mfd->dma->ov_mutex);
-		if (mfd && mfd->panel_power_on && dsi_pipe)
-			mdp4_dsi_cmd_dma_busy_wait(mfd, dsi_pipe);
-		if (dsi_pipe && dsi_pipe->blt_addr)
-			mdp4_dsi_blt_dmap_busy_wait(mfd);
-		mutex_unlock(&mfd->dma->ov_mutex);
+	if (mfd->esd_fixup)
 		mfd->esd_fixup((uint32_t)mfd);
-	}
 
 	mutex_lock(&mfd->dma->ov_mutex);
 

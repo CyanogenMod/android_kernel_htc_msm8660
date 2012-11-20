@@ -117,6 +117,11 @@ struct android_usb_platform_data {
 	 * @param intrsharing: 1 for internet sharing, 0 for internet pass through
 	 */
 	int (*match)(int product_id, int intrsharing);
+
+	/* request usb controller/phy reset during function switch
+	 * in some platfrom, we need this behavior to improve the USB stability
+	 */
+	int req_reset_during_switch_func;
 };
 
 /* Platform data for "usb_mass_storage" driver. */

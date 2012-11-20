@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,6 +28,7 @@
 
 #define RESTRK_1080P_MIN_PERF_LEVEL RESTRK_1080P_VGA_PERF_LEVEL
 #define RESTRK_1080P_MAX_PERF_LEVEL RESTRK_1080P_1080P_PERF_LEVEL
+
 struct res_trk_context {
 	struct device *device;
 	u32 irq_num;
@@ -48,6 +49,9 @@ struct res_trk_context {
 	struct ddl_buf_addr firmware_addr;
 	struct ion_client *res_ion_client;
 	u32 disable_dmx;
+	u32 disable_fullhd;
+	enum ddl_mem_area res_mem_type;
+	u32 mmu_clks_on;
 };
 
 #if DEBUG

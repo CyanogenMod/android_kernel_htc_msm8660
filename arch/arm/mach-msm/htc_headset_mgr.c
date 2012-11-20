@@ -381,11 +381,14 @@ static int get_mic_status(void)
 			    adc <= hi->pdata.headset_config[i].adc_max)
 				return hi->pdata.headset_config[i].type;
 		}
-	} else if (hs_mgr_notifier.mic_status)
+			if (hi->pdata.driver_flag & DRIVER_HS_MGR_FLOAT_DET) {
+				return HEADSET_UNPLUG;
+			}
+	} else if (hs_mgr_notifier.mic_status) {
 		mic = hs_mgr_notifier.mic_status();
+	}
 	else
 		HS_LOG("Failed to get MIC status");
-
 	return mic;
 }
 
@@ -772,6 +775,16 @@ static void insert_detect_work_func(struct work_struct *work)
 	mutex_lock(&hi->mutex_lock);
 
 	mic = get_mic_status();
+	if (hi->pdata.driver_flag & DRIVER_HS_MGR_FLOAT_DET) {
+		HS_LOG("Headset float detect enable");
+		if (mic == HEADSET_UNPLUG) {
+			set_35mm_hw_state(0);
+			hi->hs_35mm_type = mic;
+			mutex_unlock(&hi->mutex_lock);
+			HS_LOG("Headset float detected");
+			return;
+		}
+	}
 
 	if (mic == HEADSET_NO_MIC)
 		mic = tv_out_detect();
@@ -787,6 +800,7 @@ static void insert_detect_work_func(struct work_struct *work)
 	state |= BIT_35MM_HEADSET;
 
 	switch (mic) {
+
 	case HEADSET_NO_MIC:
 		state |= BIT_HEADSET_NO_MIC;
 		HS_LOG_TIME("HEADSET_NO_MIC");

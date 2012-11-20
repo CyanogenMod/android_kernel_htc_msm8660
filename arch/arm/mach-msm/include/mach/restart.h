@@ -39,6 +39,7 @@ enum RESTART_MODE {
 	RESTART_MODE_MDM_FATAL,
 
 	RESTART_MODE_APP_WATCHDOG_BARK,
+	RESTART_MODE_ERASE_EFS,
 	/* This is pseudo enum to indicate the maximum,
 	   add new restart mode before this one. */
 	RESTART_MODE_MAX

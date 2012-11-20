@@ -53,4 +53,5 @@ obj-$(CONFIG_PMIC8058_PWRKEY)           += pmic8058-pwrkey.o
 obj-$(CONFIG_PMIC8058_OTHC)             += pmic8058-othc.o
 obj-$(CONFIG_INPUT_PMIC8058_VIBRA_MEMLESS) += pmic8058-vib-memless.o
 obj-$(CONFIG_BOSCH_BMA150)              += bma150.o
+obj-$(CONFIG_INPUT_DUMMY_KEYPAD)        += dummy_keypad.o
 

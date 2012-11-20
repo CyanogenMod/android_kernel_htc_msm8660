@@ -26,8 +26,6 @@
 #include <linux/wakelock.h>
 #include "input-compat.h"
 
-#include <linux/time.h>
-
 struct evdev {
 	int open;
 	int minor;
@@ -52,7 +50,6 @@ struct evdev_client {
 	struct evdev *evdev;
 	struct list_head node;
 	unsigned int bufsize;
-	struct timespec last_report_timestamp;
 	struct input_event buffer[];
 };
 
@@ -62,7 +59,6 @@ static DEFINE_MUTEX(evdev_table_mutex);
 static void evdev_pass_event(struct evdev_client *client,
 			     struct input_event *event)
 {
-	struct timespec current_timestamp;
 	/* Interrupts are disabled, just acquire the lock. */
 	spin_lock(&client->buffer_lock);
 
@@ -83,17 +79,11 @@ static void evdev_pass_event(struct evdev_client *client,
 		client->buffer[client->tail].value = 0;
 
 		client->packet_head = client->tail;
-
-		getnstimeofday(&current_timestamp);
-		printk(KERN_DEBUG "[EVDEV] device:%s: buffer overrun happened, %lu ms used since last access.\n",
-			client->name,
-			(unsigned long)(timespec_to_ns(&current_timestamp) - timespec_to_ns(&(client->last_report_timestamp)))/1000000);
 	}
 
 	if (event->type == EV_SYN && event->code == SYN_REPORT) {
 		client->packet_head = client->head;
 		kill_fasync(&client->fasync, SIGIO, POLL_IN);
-		getnstimeofday(&(client->last_report_timestamp));
 	}
 
 	spin_unlock(&client->buffer_lock);

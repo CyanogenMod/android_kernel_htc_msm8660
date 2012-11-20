@@ -321,7 +321,7 @@ void store_vocproc_cal(int32_t len, struct cal_block *cal_blocks)
 
 	for (i = 0; i < len; i++) {
 		if (cal_blocks[i].cal_offset > acdb_data.pmem_len) {
-			pr_aud_err("%s: offset %d is > pmem_len %ld\n",
+			pr_aud_info("%s: offset %d is > pmem_len %ld\n",
 				__func__, cal_blocks[i].cal_offset,
 				acdb_data.pmem_len);
 			acdb_data.vocproc_cal[i].cal_size = 0;

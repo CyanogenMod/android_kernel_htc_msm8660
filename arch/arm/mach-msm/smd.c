@@ -376,6 +376,9 @@ int smd_diag(void)
 
 static void handle_modem_crash(void)
 {
+#ifdef CONFIG_MSM_NATIVE_RESTART
+	unsigned modm = __raw_readl(SMSM_STATE_ADDR(SMSM_MODEM_STATE));
+#endif
 	pr_err("[SMD] MODEM/AMSS has CRASHED\n");
 	smd_diag();
 
@@ -385,7 +388,10 @@ static void handle_modem_crash(void)
 #endif
 
 #ifdef CONFIG_MSM_NATIVE_RESTART
-	arm_pm_restart(RESTART_MODE_MODEM_CRASH, "force-hard");
+	if (modm & SMSM_ERASE_EFS)
+		arm_pm_restart(RESTART_MODE_ERASE_EFS, "force-hard");
+	else
+		arm_pm_restart(RESTART_MODE_MODEM_CRASH, "force-hard");
 #endif
 }
 

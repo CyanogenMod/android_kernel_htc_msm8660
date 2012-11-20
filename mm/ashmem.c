@@ -630,7 +630,6 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 	return ret;
 }
 
-#ifdef CONFIG_OUTER_CACHE
 static unsigned int virtaddr_to_physaddr(unsigned int virtaddr)
 {
 	unsigned int physaddr = 0;
@@ -667,30 +666,63 @@ done:
 	physaddr <<= PAGE_SHIFT;
 	return physaddr;
 }
-#endif
 
 static int ashmem_cache_op(struct ashmem_area *asma,
 	void (*cache_func)(unsigned long vstart, unsigned long length,
 				unsigned long pstart))
 {
-#ifdef CONFIG_OUTER_CACHE
+	int ret = 0;
+	struct vm_area_struct *vma;
 	unsigned long vaddr;
-#endif
-	mutex_lock(&ashmem_mutex);
+
+	if (!asma->vm_start)
+		return -EINVAL;
+
+	down_read(&current->mm->mmap_sem);
+	vma = find_vma(current->mm, asma->vm_start);
+	if (!vma) {
+		ret = -EINVAL;
+		goto done;
+	}
+	if (vma->vm_file != asma->file) {
+		ret = -EINVAL;
+		goto done;
+	}
+	if ((asma->vm_start + asma->size) > (vma->vm_start + vma->vm_end)) {
+		ret = -EINVAL;
+		goto done;
+	}
 #ifndef CONFIG_OUTER_CACHE
+	/* Check every virtual address in page unit have the mapping? */
+	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
+		vaddr += PAGE_SIZE) {
+		unsigned long physaddr;
+		physaddr = virtaddr_to_physaddr(vaddr);
+		if (!physaddr) {
+			pr_debug("ashmem_cache_op: Task(%s) try to operate unmapping VA(0x%lx)!\n", current->comm, vaddr);
+			ret = -EINVAL;
+			goto done;
+		}
+	}
 	cache_func(asma->vm_start, asma->size, 0);
 #else
 	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
 		vaddr += PAGE_SIZE) {
 		unsigned long physaddr;
 		physaddr = virtaddr_to_physaddr(vaddr);
-		if (!physaddr)
-			return -EINVAL;
+		if (!physaddr) {
+			pr_debug("ashmem_cache_op: Task(%s) try to operate unmapping VA(0x%lx)!\n", current->comm, vaddr);
+			ret = -EINVAL;
+			goto done;
+		}
 		cache_func(vaddr, PAGE_SIZE, physaddr);
 	}
 #endif
-	mutex_unlock(&ashmem_mutex);
-	return 0;
+done:
+	up_read(&current->mm->mmap_sem);
+	if (ret)
+		asma->vm_start = 0;
+	return ret;
 }
 
 static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)

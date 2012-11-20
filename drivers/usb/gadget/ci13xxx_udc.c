@@ -66,6 +66,7 @@
 #include <linux/usb/otg.h>
 
 #include "ci13xxx_udc.h"
+#include <mach/htc_battery_common.h>
 
 
 /******************************************************************************
@@ -1604,6 +1605,12 @@ static inline u8 _usb_addr(struct ci13xxx_ep *ep)
 	return ((ep->dir == TX) ? USB_ENDPOINT_DIR_MASK : 0) | ep->num;
 }
 
+static void usb_chg_stop(struct work_struct *w)
+{
+	USB_INFO("disable charger\n");
+	htc_battery_charger_disable();
+}
+
 /**
  * _hardware_queue: configures a request at hardware level
  * @gadget: gadget
@@ -1765,15 +1772,15 @@ static int _hardware_dequeue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 
 	mReq->req.status = mReq->ptr->token & TD_STATUS;
 	if ((TD_STATUS_HALTED & mReq->req.status) != 0) {
-		USB_ERR("%s: HALTED EP%d %s %6d\n", __func__, mEp->num,
+		USB_WARNING("%s: HALTED EP%d %s %6d\n", __func__, mEp->num,
 			((mEp->dir == TX)? "I":"O"), mReq->req.length);
 		mReq->req.status = -1;
 	} else if ((TD_STATUS_DT_ERR & mReq->req.status) != 0) {
-		USB_ERR("%s: DT_ERR EP%d %s %6d\n", __func__, mEp->num,
+		USB_WARNING("%s: DT_ERR EP%d %s %6d\n", __func__, mEp->num,
 			((mEp->dir == TX)? "I":"O"), mReq->req.length);
 		mReq->req.status = -1;
 	} else if ((TD_STATUS_TR_ERR & mReq->req.status) != 0) {
-		USB_ERR("%s: TR_ERR EP%d %s %6d\n", __func__, mEp->num,
+		USB_WARNING("%s: TR_ERR EP%d %s %6d\n", __func__, mEp->num,
 			((mEp->dir == TX)? "I":"O"), mReq->req.length);
 		mReq->req.status = -1;
 	}
@@ -2105,8 +2112,7 @@ dequeue:
 				req_dequeue = 0;
 				udc->dTD_update_fail_count++;
 				mEp->dTD_update_fail_count++;
-				/* FIXME: QCT HW guys suggest to delay 1ms */
-				mdelay(1);
+				udelay(10);
 				goto dequeue;
 			}
 			break;
@@ -2144,6 +2150,7 @@ __acquires(udc->lock)
 {
 	unsigned i;
 	u8 tmode = 0;
+	struct usb_info *ui = the_usb_info;
 
 	trace("%p", udc);
 
@@ -2295,6 +2302,8 @@ __acquires(udc->lock)
 					case TEST_K:
 					case TEST_SE0_NAK:
 					case TEST_PACKET:
+						if (!udc->test_mode)
+							schedule_delayed_work(&ui->chg_stop, 0);
 					case TEST_FORCE_EN:
 						udc->test_mode = tmode;
 						err = isr_setup_status_phase(
@@ -2795,12 +2804,30 @@ static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 
 	if (is_active)
 		hw_device_state(udc->ep0out.qh.dma);
-	else
+	else {
 		hw_device_state(0);
+		_gadget_stop_activity(&udc->gadget, 1);
+	}
 
 	return 0;
 }
 
+static int ci13xxx_request_reset(struct usb_gadget *_gadget)
+{
+	struct ci13xxx *udc = container_of(_gadget, struct ci13xxx, gadget);
+
+	if (((udc->udc_driver->flags & CI13XXX_PULLUP_ON_VBUS) &&
+			!udc->vbus_active) || !udc->driver || !udc->transceiver) {
+		return 0;
+	}
+
+	USBH_DEBUG("ci13xxx_request_reset\n");
+
+	otg_init(udc->transceiver);
+	hw_device_reset(udc);
+
+	return 0;
+}
 
 /**
  * Device operations part of the API to the USB controller hardware,
@@ -2812,6 +2839,7 @@ static const struct usb_gadget_ops usb_gadget_ops = {
 	.wakeup		= ci13xxx_wakeup,
 	.vbus_draw	= ci13xxx_vbus_draw,
 	.pullup		= ci13xxx_pullup,
+	.req_reset	= ci13xxx_request_reset,
 };
 
 /**
@@ -3064,7 +3092,7 @@ static irqreturn_t udc_irq(void)
 			isr_reset_handler(udc);
 
 			if (udc->transceiver)
-				udc->transceiver->notify_usb_attached();
+				udc->transceiver->notify_charger(CONNECT_TYPE_USB);
 		}
 		if (USBi_PCI & intr) {
 			isr_statistics.pci++;

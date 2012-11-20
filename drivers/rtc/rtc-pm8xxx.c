@@ -24,6 +24,7 @@
 #include <asm/atomic.h>
 #include <linux/delay.h>
 #include <linux/kthread.h>
+#include <linux/sched.h>
 
 /* RTC Register offsets from RTC CTRL REG */
 #define PM8XXX_ALARM_CTRL_OFFSET 0x01
@@ -226,7 +227,8 @@ pm8xxx_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	value[3] = (secs >> 24) & 0xFF;
 
 	dev_dbg(dev, "Seconds value to be written to RTC = %lu\n", secs);
-
+	printk("[RTC_DEBUG] Seconds value to be written to RTC = %lu by pid[%d][%s]\n", secs, current->pid, current->comm);
+	dump_stack();
 	spin_lock_irqsave(&rtc_dd->ctrl_reg_lock, irq_flags);
 	ctrl_reg = rtc_dd->ctrl_reg;
 

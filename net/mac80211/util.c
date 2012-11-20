@@ -912,7 +912,9 @@ int ieee80211_build_preq_ies(struct ieee80211_local *local, u8 *buffer,
 	u8 *pos;
 	size_t offset = 0, noffset;
 	int supp_rates_len, i;
-	u8 rates[32];
+	/*HTC_WIFI_START*/
+	u8 rates[32] = {0};
+	/*HTC_WIF_END*/
 	int num_rates;
 	int ext_rates_len;
 

@@ -166,7 +166,7 @@ void __diag_smd_send_req(void)
 
 #ifdef SDQXDM_DEBUG
 				if (full) {
-					pr_err("[diag-dbg] buffer become available %d %d, read %d\n",
+					pr_debug("[diag-dbg] buffer become available %d %d, read %d\n",
 							driver->in_busy_1, driver->in_busy_2, r);
 					full = 0;
 				}
@@ -194,7 +194,7 @@ void __diag_smd_send_req(void)
 	} else {
 #ifdef SDQXDM_DEBUG
 		if (!full && driver->ch)
-			pr_info("[diag-dbg] Buffer full, %d bytes pending.\n", smd_read_avail(driver->ch));
+			pr_debug("[diag-dbg] Buffer full, %d bytes pending.\n", smd_read_avail(driver->ch));
 		full = 1;
 #endif
 	}

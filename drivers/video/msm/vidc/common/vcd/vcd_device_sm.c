@@ -38,6 +38,9 @@ void vcd_do_device_state_transition(struct vcd_drv_ctxt *drv_ctxt,
 				  drv_ctxt, to_state);
 	}
 
+	if (!drv_ctxt)
+		return;
+
 	state_ctxt = &drv_ctxt->dev_state;
 
 	/* HTC_START (klockwork issue)*/

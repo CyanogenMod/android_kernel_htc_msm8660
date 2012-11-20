@@ -19,6 +19,8 @@ source "drivers/char/agp/Kconfig"
 
 source "drivers/gpu/vga/Kconfig"
 
+source "drivers/video/msm/vidc/Kconfig"
+
 source "drivers/gpu/drm/Kconfig"
 
 source "drivers/gpu/stub/Kconfig"
@@ -2388,9 +2390,9 @@ if ARCH_MSM7X30
 	source "drivers/video/msm_7x30/Kconfig"
 endif
 
-#if (ARCH_MSM8960 || ARCH_MSM7X27A)
+if (ARCH_MSM8960 || ARCH_MSM7X27A || ARCH_MSM8X60)
 	source "drivers/video/msm/Kconfig"
-#endif
+endif
 
 config FB_MSM_OVERLAY_LEGACY
 	bool

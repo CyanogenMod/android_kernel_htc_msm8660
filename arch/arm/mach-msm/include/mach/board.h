@@ -286,6 +286,12 @@ struct msm_camera_sensor_info {
 	int (*camera_power_off)(void);
 	int use_rawchip;
 	int (*sensor_version)(void);
+//HTC_CAM_START chuck
+#ifndef CONFIG_MSM_CAMERA_8X60
+	int (*camera_main_get_probe)(void);
+	void (*camera_main_set_probe)(int);
+#endif
+//HTC_CAM_END
 #if 1 /* HTC to be removed */
 	/* HTC++ */
 	void(*camera_clk_switch)(void);
@@ -410,7 +416,9 @@ struct msm_panel_common_pdata {
 	int (*bkl_enable)(int);
 	int fpga_3d_config_addr;
 	struct gamma_curvy *abl_gamma_tbl;
-	struct mdp_reg *color_enhancment_tbl;
+	u32 ov0_wb_size;  /* overlay0 writeback size */
+	u32 ov1_wb_size;  /* overlay1 writeback size */
+	u32 mem_hid;
 };
 
 struct lcdc_platform_data {
@@ -517,6 +525,7 @@ struct msm_vidc_platform_data {
 	int memtype;
 	u32 enable_ion;
 	int disable_dmx;
+	int disable_fullhd;
 #ifdef CONFIG_MSM_BUS_SCALING
 	struct msm_bus_scale_pdata *vidc_bus_client_pdata;
 #endif
@@ -665,5 +674,8 @@ extern int emmc_partition_read_proc(char *page, char **start, off_t off,
 extern int processor_name_read_proc(char *page, char **start, off_t off,
 			   int count, int *eof, void *data);
 #endif
+
+extern int dying_processors_read_proc(char *page, char **start, off_t off,
+			   int count, int *eof, void *data);
 
 #endif

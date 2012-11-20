@@ -21,6 +21,12 @@ static const struct adie_codec_operations *cur_adie_ops;
 int adie_codec_register_codec_operations(
 			const struct adie_codec_operations *adie_ops)
 {
+#ifdef CONFIG_CODEC_AIC3008
+//HTC_CSP_START
+//difei, just return for mark marimba
+	return 0;
+//HTC_CSP_END
+#endif
 	if (adie_ops == NULL)
 		return -EINVAL;
 
@@ -37,6 +43,12 @@ int adie_codec_open(struct adie_codec_dev_profile *profile,
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_open != NULL)
 			rc = cur_adie_ops->codec_open(profile, path_pptr);
@@ -51,6 +63,12 @@ int adie_codec_close(struct adie_codec_path *path_ptr)
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_close != NULL)
 			rc = cur_adie_ops->codec_close(path_ptr);
@@ -66,6 +84,12 @@ int adie_codec_set_device_digital_volume(struct adie_codec_path *path_ptr,
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_set_device_digital_volume != NULL) {
 			rc = cur_adie_ops->codec_set_device_digital_volume(
@@ -85,6 +109,13 @@ int adie_codec_set_device_analog_volume(struct adie_codec_path *path_ptr,
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
+
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_set_device_analog_volume != NULL) {
 			rc = cur_adie_ops->codec_set_device_analog_volume(
@@ -102,6 +133,13 @@ EXPORT_SYMBOL(adie_codec_set_device_analog_volume);
 int adie_codec_setpath(struct adie_codec_path *path_ptr, u32 freq_plan, u32 osr)
 {
 	int rc = -EPERM;
+
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_setpath != NULL) {
@@ -121,6 +159,13 @@ u32 adie_codec_freq_supported(struct adie_codec_dev_profile *profile,
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
+
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_freq_supported != NULL)
 			rc = cur_adie_ops->codec_freq_supported(profile,
@@ -136,6 +181,13 @@ int adie_codec_enable_sidetone(struct adie_codec_path *rx_path_ptr,
 	u32 enable)
 {
 	int rc = -EPERM;
+
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_enable_sidetone != NULL)
@@ -153,6 +205,13 @@ int adie_codec_enable_anc(struct adie_codec_path *rx_path_ptr,
 {
 	int rc = -EPERM;
 
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
+
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_enable_anc != NULL)
 			rc = cur_adie_ops->codec_enable_anc(rx_path_ptr,
@@ -166,6 +225,13 @@ EXPORT_SYMBOL(adie_codec_enable_anc);
 int adie_codec_proceed_stage(struct adie_codec_path *path_ptr, u32 state)
 {
 	int rc = -EPERM;
+
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_proceed_stage != NULL)
@@ -181,6 +247,13 @@ EXPORT_SYMBOL(adie_codec_proceed_stage);
 int adie_codec_set_master_mode(struct adie_codec_path *path_ptr, u8 master)
 {
 	int rc = -EPERM;
+
+#ifdef CONFIG_CODEC_AIC3008
+	//HTC_CSP_START
+	//difei, just return for mark marimba
+		return 0;
+	//HTC_CSP_END
+#endif
 
 	if (cur_adie_ops != NULL) {
 		if (cur_adie_ops->codec_set_master_mode != NULL)

@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2011 Code Aurora Forum.  All rights reserved.
+   Copyright (c) 2000-2001, 2010-2012 Code Aurora Forum.  All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -340,6 +340,14 @@ static void hci_conn_idle(unsigned long arg)
 	hci_conn_enter_sniff_mode(conn);
 }
 
+static void encryption_disabled_timeout(unsigned long userdata)
+{
+	struct hci_conn *conn = (struct hci_conn *)userdata;
+	BT_DBG("conn %p Grace Prd Exp ", conn);
+
+	hci_encrypt_cfm(conn, 0, 0);
+}
+
 struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 					__u16 pkt_type, bdaddr_t *dst)
 {
@@ -366,6 +374,7 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 	switch (type) {
 	case ACL_LINK:
 		conn->pkt_type = hdev->pkt_type & ACL_PTYPE_MASK;
+		conn->link_policy = hdev->link_policy;
 		break;
 	case SCO_LINK:
 		if (!pkt_type)
@@ -391,6 +400,8 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 
 	setup_timer(&conn->disc_timer, hci_conn_timeout, (unsigned long)conn);
 	setup_timer(&conn->idle_timer, hci_conn_idle, (unsigned long)conn);
+	setup_timer(&conn->encrypt_pause_timer, encryption_disabled_timeout,
+			(unsigned long)conn);
 
 	atomic_set(&conn->refcnt, 0);
 
@@ -429,9 +440,11 @@ int hci_conn_del(struct hci_conn *conn)
 
 	BT_DBG("%s conn %p handle %d", hdev->name, conn, conn->handle);
 
+	/* Make sure no timers are running */
 	del_timer(&conn->idle_timer);
-
 	del_timer(&conn->disc_timer);
+	del_timer(&conn->smp_timer);
+	del_timer(&conn->encrypt_pause_timer);
 
 	if (conn->type == ACL_LINK) {
 		struct hci_conn *sco = conn->link;
@@ -459,6 +472,8 @@ int hci_conn_del(struct hci_conn *conn)
 	if (hdev->notify)
 		hdev->notify(hdev, HCI_NOTIFY_CONN_DEL);
 
+	tasklet_schedule(&hdev->tx_task);
+
 	tasklet_enable(&hdev->tx_task);
 
 	skb_queue_purge(&conn->data_q);
@@ -466,6 +481,11 @@ int hci_conn_del(struct hci_conn *conn)
 	hci_conn_put_device(conn);
 
 	hci_dev_put(hdev);
+
+	/* free it if no handle */
+	if (conn->handle == 0)
+		kfree(conn);
+
 
 	return 0;
 }
@@ -508,18 +528,24 @@ int hci_chan_del(struct hci_chan *chan)
 int hci_chan_put(struct hci_chan *chan)
 {
 	struct hci_cp_disconn_logical_link cp;
+	struct hci_conn *hcon;
+	u16 ll_handle;
 
 	BT_DBG("chan %p refcnt %d", chan, atomic_read(&chan->refcnt));
 	if (!atomic_dec_and_test(&chan->refcnt))
 		return 0;
 
-	BT_DBG("chan->conn->state %d", chan->conn->state);
-	if (chan->conn->state == BT_CONNECTED) {
-		cp.log_handle = cpu_to_le16(chan->ll_handle);
-		hci_send_cmd(chan->conn->hdev, HCI_OP_DISCONN_LOGICAL_LINK,
+	hcon = chan->conn;
+	ll_handle = chan->ll_handle;
+
+	hci_chan_del(chan);
+
+	BT_DBG("chan->conn->state %d", hcon->state);
+	if (hcon->state == BT_CONNECTED) {
+		cp.log_handle = cpu_to_le16(ll_handle);
+		hci_send_cmd(hcon->hdev, HCI_OP_DISCONN_LOGICAL_LINK,
 				sizeof(cp), &cp);
-	} else
-		hci_chan_del(chan);
+	}
 
 	return 1;
 }
@@ -899,7 +925,9 @@ void hci_conn_enter_sniff_mode(struct hci_conn *conn)
 	if (!lmp_sniff_capable(hdev) || !lmp_sniff_capable(conn))
 		return;
 
-	if (conn->mode != HCI_CM_ACTIVE || !(conn->link_policy & HCI_LP_SNIFF))
+	if (conn->mode != HCI_CM_ACTIVE ||
+		!(conn->link_policy & HCI_LP_SNIFF) ||
+		(hci_find_link_key(hdev, &conn->dst) == NULL))
 		return;
 
 	if (lmp_sniffsubr_capable(hdev) && lmp_sniffsubr_capable(conn)) {

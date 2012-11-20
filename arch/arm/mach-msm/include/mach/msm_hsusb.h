@@ -173,6 +173,8 @@ struct msm_otg_platform_data {
 	int  (*chg_init)(int init);
 	int (*config_vddcx)(int high);
 	int (*init_vddcx)(int init);
+	/* 1 : uart, 0 : usb */
+	void (*usb_uart_switch)(int);
 
 	struct pm_qos_request_list pm_qos_req_dma;
 };
@@ -185,5 +187,8 @@ struct msm_usb_host_platform_data {
 	int  (*vbus_init)(int init);
 	struct clk *ebi1_clk;
 };
+
+void htc_mode_enable(int enable);
+int check_htc_mode_status(void);
 
 #endif

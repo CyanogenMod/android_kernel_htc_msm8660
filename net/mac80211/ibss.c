@@ -76,8 +76,9 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_supported_band *sband;
 	struct cfg80211_bss *bss;
 	u32 bss_change;
-	u8 supp_rates[IEEE80211_MAX_SUPP_RATES];
-
+	/*HTC_WIFI_START*/
+	u8 supp_rates[IEEE80211_MAX_SUPP_RATES] = {0};
+	/*HTC_WiFI_END*/
 	lockdep_assert_held(&ifibss->mtx);
 
 	/* Reset own TSF to allow time synchronization work. */

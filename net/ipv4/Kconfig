@@ -226,7 +226,7 @@ config IP_MROUTE
 
 config LARGE_TCP_INITIAL_BUFFER
 	bool "TCP: initial TCP buffer size 5K:64K"
-	default n
+	default y
 	help
 	 yes means TCP buffer size 5K
 

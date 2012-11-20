@@ -25,11 +25,15 @@ endif
 obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos.o
 
 ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
-obj-$(CONFIG_MSM_CAMERA) += gemini/
-obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
+	obj-$(CONFIG_MSM_CAMERA) += gemini/
+	obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
 else
-obj-$(CONFIG_MSM_CAMERA) += gemini_8x60/
-obj-$(CONFIG_MSM_CAMERA_FLASH) += flash_8x60.o
+	obj-$(CONFIG_MSM_CAMERA) += gemini_8x60/
+ifeq ($(CONFIG_ARCH_MSM7X27A),y)
+	obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
+else
+	obj-$(CONFIG_MSM_CAMERA_FLASH) += flash_8x60.o
+endif
 endif
 obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o msm_io7x.o
 obj-$(CONFIG_ARCH_MSM7X27A) += msm_vfe7x27a.o msm_io_7x27a.o
@@ -41,7 +45,10 @@ obj-$(CONFIG_MACH_BLISS) += s5k4e5yx.o s5k4e5yx_reg_bls.o
 obj-$(CONFIG_MACH_BLISSC) += s5k4e5yx.o s5k4e5yx_reg_bls.o
 obj-$(CONFIG_MACH_PRIMOU) += s5k4e5yx.o s5k4e5yx_reg_pro.o
 obj-$(CONFIG_MACH_PRIMOC) += s5k4e5yx.o s5k4e5yx_reg_pro.o
+obj-$(CONFIG_MACH_KINGDOM) += s5k4e5yx.o s5k4e5yx_reg.o
 endif
+
+
 ifdef CONFIG_CAMERA_ZSL
 	obj-$(CONFIG_ARCH_MSM8X60) += msm_io_8x60.o msm_vfe_8x60_ZSL.o msm_vpe1_8x60.o
 else
@@ -57,12 +64,16 @@ obj-$(CONFIG_ARCH_MSM8960) += msm_io_8960.o msm_ispif.o msm_vfe32.o msm_vpe.o
 obj-$(CONFIG_MT9T013) += mt9t013.o mt9t013_reg.o
 obj-$(CONFIG_SN12M0PZ) += sn12m0pz.o sn12m0pz_reg.o
 obj-$(CONFIG_MT9P012) += mt9p012_reg.o
+ifdef CONFIG_MACH_PRIMOTD
+obj-$(CONFIG_S5K4E1) += s5k4e1_td.o s5k4e1_reg_td.o
+else
+obj-$(CONFIG_S5K4E1) += s5k4e1.o s5k4e1_reg.o
+endif
 obj-$(CONFIG_MSM_CAMERA_AF_FOXCONN) += mt9p012_fox.o
 obj-$(CONFIG_MSM_CAMERA_AF_BAM) += mt9p012_bam.o
 obj-$(CONFIG_MT9P012_KM) += mt9p012_km.o mt9p012_km_reg.o
 obj-$(CONFIG_MT9E013) += mt9e013.o mt9e013_reg.o
 obj-$(CONFIG_S5K3E2FX) += s5k3e2fx.o
-obj-$(CONFIG_S5K4E1) += s5k4e1.o s5k4e1_reg.o
 obj-$(CONFIG_S5K3H1GX) += s5k3h1gx.o s5k3h1gx_reg_pyd.o
 
 #FIXME: Merge the two ifeq causes VX6953 preview not coming up.

@@ -95,6 +95,10 @@ enum android_alarm_return_flags {
 /* Ack last alarm and wait for next */
 #define ANDROID_ALARM_WAIT                  _IO('a', 1)
 
+#ifdef CONFIG_ANDROID_RTC_CHANGE_WAIT
+#define ANDROID_RTC_CHANGE_WAIT             _IO('a', 2)
+#endif
+
 #define ALARM_IOW(c, type, size)            _IOW('a', (c) | ((type) << 4), size)
 /* Set alarm */
 #define ANDROID_ALARM_SET(type)             ALARM_IOW(2, type, struct timespec)

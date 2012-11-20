@@ -43,6 +43,9 @@
 /* static struct pw8058_pwm_config pwm_conf; */
 static struct workqueue_struct *g_led_work_queue;
 static int duties[64];
+static struct pm8058_led_data  *for_key_led_data;
+static int flag_hold_virtual_key = 0;
+static int virtual_key_state;
 struct wake_lock pmic_led_wake_lock;
 
 static int bank_to_id(int bank)
@@ -68,7 +71,43 @@ static int bank_to_id(int bank)
 
 	return id;
 }
+void button_backlight_flash(int brightness_key)
+{
+	int milliamps;
+	int id, mode;
 
+	LED_INFO_LOG("%s brightness_key: %d\n", __func__,brightness_key);
+	pwm_disable(for_key_led_data->pwm_led);
+	id = bank_to_id(for_key_led_data->bank);
+	mode = (id == PM_PWM_LED_KPD) ? PM_PWM_CONF_PWM1 :
+					PM_PWM_CONF_PWM1 + (for_key_led_data->bank - 4);
+
+	if (brightness_key) {
+		flag_hold_virtual_key = 1;
+		milliamps = (for_key_led_data->flags & PM8058_LED_DYNAMIC_BRIGHTNESS_EN) ?
+	    for_key_led_data->out_current * brightness_key / LED_FULL :
+	    for_key_led_data->out_current;
+		pm8058_pwm_config_led(for_key_led_data->pwm_led, id, mode, milliamps);
+		pwm_config(for_key_led_data->pwm_led, 320000, 640000);
+		pwm_enable(for_key_led_data->pwm_led);
+		LED_INFO_LOG("%s Button_backlight flash on\n", __func__);
+	} else {
+		pwm_disable(for_key_led_data->pwm_led);
+		pwm_disable(for_key_led_data->pwm_led);
+		pm8058_pwm_config_led(for_key_led_data->pwm_led, id, mode, 0);
+		LED_INFO_LOG("%s Button_backlight flash off\n", __func__);
+		if (virtual_key_state != 0){
+			milliamps = (for_key_led_data->flags & PM8058_LED_DYNAMIC_BRIGHTNESS_EN) ?
+			for_key_led_data->out_current * brightness_key / LED_FULL :
+			for_key_led_data->out_current;
+			pm8058_pwm_config_led(for_key_led_data->pwm_led, id, mode, milliamps);
+			pwm_config(for_key_led_data->pwm_led, 64000, 64000);
+			pwm_enable(for_key_led_data->pwm_led);
+			LED_INFO_LOG("%s Button_backlight state resume\n", __func__);
+		}
+		flag_hold_virtual_key = 0;
+	}
+}
 static void pwm_lut_delayed_fade_out(struct work_struct *work)
 {
 	struct pm8058_led_data *ldata;
@@ -179,6 +218,11 @@ static void pm8058_drvx_led_brightness_set(struct led_classdev *led_cdev,
 		charming_led_enable(enable);
 
 	lut_flag = ldata->lut_flag & ~(PM_PWM_LUT_LOOP | PM_PWM_LUT_REVERSE);
+	virtual_key_state = enable;
+	if (flag_hold_virtual_key == 1) {
+		LED_INFO_LOG("%s, Return control by button_backlight flash \n", __func__);
+		return;
+	}
 
 	if (brightness) {
 		milliamps = (ldata->flags & PM8058_LED_DYNAMIC_BRIGHTNESS_EN) ?
@@ -549,6 +593,8 @@ static int pm8058_led_probe(struct platform_device *pdev)
 				__func__, ldata[i].ldev.name);
 			goto err_register_led_cdev;
 		}
+		if (ldata[i].flags & PM8058_LED_LTU_EN)
+			for_key_led_data = &ldata[i];
 	}
 
 	for (i = 0; i < pdata->num_leds; i++) {

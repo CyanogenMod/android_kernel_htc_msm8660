@@ -1190,6 +1190,12 @@ config USB_F_SERIAL_SMD
           separate transport layer u_smd(very similar to u_serial.c)
           Say "y" to link the driver statically
 
+config USB_ANDROID_USBNET
+	boolean "Android gadget USBNET function for VoIP"
+	depends on USB_G_ANDROID
+	default n
+	help
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET
@@ -1317,7 +1323,7 @@ config USB_ACCESSORY_DETECT_BY_ADC
 
 config USB_CSW_HACK
 	boolean "USB Mass storage csw hack Feature"
-	default y
+	default n
 	help
 	 This csw hack feature is for increasing the performance of the mass
 	 storage
@@ -1394,6 +1400,11 @@ config USB_ANDROID_RMNET_CTRL_SMD
 	 It uses QUALCOMM MSM Interface for control
 	 transfers. This option enables only control interface.
 	 Data interface used is BAM.
+
+config USB_HUB
+	boolean "USB HUB driver"
+	depends on USB_G_ANDROID
+	default n
 
 config USB_GADGET_VERIZON_PRODUCT_ID
 	boolean "Verizon Product ID Mapping"

@@ -25,6 +25,7 @@
 #include <mach/peripheral-loader.h>
 #include <mach/subsystem_restart.h>
 #include <mach/subsystem_notif.h>
+#include <mach/restart.h>
 
 #include "smd_private.h"
 #include "modem_notifier.h"
@@ -49,8 +50,6 @@ static DECLARE_DELAYED_WORK(debug_crash_modem_work,
 
 module_param(reset_modem, int, 0644);
 #endif
-
-static void do_soc_restart(void);
 
 /* Subsystem restart: QDSP6 data, functions */
 static void q6_fatal_fn(struct work_struct *);
@@ -88,6 +87,9 @@ int subsys_q6_shutdown(const struct subsys_data *crashed_subsys)
 {
 	void __iomem *q6_wdog_addr =
 		ioremap_nocache(Q6SS_WDOG_ENABLE, 8);
+
+	/* We don't want it happens */
+	BUG_ON(!q6_wdog_addr);
 
 	send_q6_nmi();
 	writel_relaxed(0x0, q6_wdog_addr);
@@ -149,6 +151,9 @@ static void modem_unlock_timeout(struct work_struct *work)
 			ioremap_nocache(MODEM_HWIO_MSS_RESET_ADDR, 8);
 	pr_crit("%s: Timeout waiting for modem to unlock.\n", MODULE_NAME);
 
+	/* We don't want it happens */
+	BUG_ON(!hwio_modem_reset_addr);
+
 	/* Set MSS_MODEM_RESET to 0x0 since the unlock didn't work */
 	writel_relaxed(0x0, hwio_modem_reset_addr);
 	/* Write needs to go through before the modem is restarted. */
@@ -180,8 +185,7 @@ static void modem_fatal_fn(struct work_struct *work)
 
 		pr_err("%s: User-invoked system reset/powerdown.",
 			MODULE_NAME);
-		do_soc_restart();
-
+		soc_restart(RESTART_MODE_MODEM_WATCHDOG_BITE, "MODEM DOG!");
 	} else {
 
 		int ret;
@@ -190,6 +194,9 @@ static void modem_fatal_fn(struct work_struct *work)
 
 		pr_err("%s: Modem AHB locked up.\n", MODULE_NAME);
 		pr_err("%s: Trying to free up modem!\n", MODULE_NAME);
+
+		/* We don't want it happens */
+		BUG_ON(!hwio_modem_reset_addr);
 
 		writel(0x3, hwio_modem_reset_addr);
 
@@ -235,6 +242,8 @@ static int subsys_modem_shutdown(const struct subsys_data *crashed_subsys)
 
 	/* Disable the modem watchdog to allow clean modem bootup */
 	modem_wdog_addr = ioremap_nocache(MODEM_WDOG_ENABLE, 8);
+	/* We don't want it happens */
+	BUG_ON(!modem_wdog_addr);
 	writel_relaxed(0x0, modem_wdog_addr);
 
 	/*
@@ -292,13 +301,6 @@ static void subsys_modem_crash_shutdown(
 
 	/* Wait to allow the modem to clean up caches etc. */
 	mdelay(5);
-}
-
-/* Non-subsystem-specific functions */
-static void do_soc_restart(void)
-{
-	pr_err("%s: Rebooting SoC..\n", MODULE_NAME);
-	kernel_restart(NULL);
 }
 
 static irqreturn_t subsys_wdog_bite_irq(int irq, void *dev_id)

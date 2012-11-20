@@ -505,6 +505,14 @@ static int mhl_detect(struct cable_detect_info *pInfo)
 
 	if (pInfo->config_usb_id_gpios)
 		pInfo->config_usb_id_gpios(1);
+	else {
+#if (defined(CONFIG_USB_OTG) && defined(CONFIG_USB_OTG_HOST))
+		type = DOCK_STATE_USB_HOST;
+#else
+		type = DOCK_STATE_UNDEFINED;
+#endif
+		return type;
+	}
 
 	adc_value = cable_detect_get_adc();
 	CABLE_INFO("[2nd] accessory adc = 0x%x\n", adc_value);
@@ -851,6 +859,7 @@ static int cable_detect_probe(struct platform_device *pdev)
 #ifdef CONFIG_CABLE_DETECT_ACCESSORY
 		pInfo->detect_type = pdata->detect_type;
 		pInfo->usb_id_pin_gpio = pdata->usb_id_pin_gpio;
+		pInfo->idpin_irq = pdata->idpin_irq;
 		pInfo->mhl_reset_gpio = pdata->mhl_reset_gpio;
 		pInfo->mpp_data = &pdata->mpp_data;
 		pInfo->config_usb_id_gpios = pdata->config_usb_id_gpios;

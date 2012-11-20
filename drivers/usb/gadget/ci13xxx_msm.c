@@ -102,6 +102,7 @@ static int ci13xxx_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto udc_remove;
 	}
+	INIT_DELAYED_WORK(&ui->chg_stop, usb_chg_stop);
 
 	pm_runtime_no_callbacks(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);

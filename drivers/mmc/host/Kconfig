@@ -683,3 +683,8 @@ config MMC_USHC
 
 	  Note: These controllers only support SDIO cards and do not
 	  support MMC or SD memory cards.
+
+config MMC_ATHEROS_SDIO
+        bool "Use Atheros Wi-FI chip and SDIO IRQ"
+        help
+	  Use Atheros Wi-FI chip and SDIO IRQ

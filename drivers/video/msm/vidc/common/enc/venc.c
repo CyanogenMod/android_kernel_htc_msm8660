@@ -458,13 +458,17 @@ static u32 vid_enc_close_client(struct video_client_ctx *client_ctx)
 			rc = wait_for_completion_timeout(&client_ctx->event,
 				5 * HZ);
 			if (!rc) {
-				ERR("%s:ERROR vcd_stop time out"
+/* HTC_START */
+				INFO("%s:Warning: vcd_stop time out"
 				"rc = %d\n", __func__, rc);
+/* HTC_END */
 			}
 
 			if (client_ctx->event_status) {
-				ERR("%s:ERROR "
+/* HTC_START */
+				INFO("%s:Warning "
 				"vcd_stop Not successs\n", __func__);
+/* HTC_END */
 			}
 		}
 	}
@@ -536,6 +540,7 @@ static int vid_enc_open(struct inode *inode, struct file *file)
 
 	init_completion(&client_ctx->event);
 	mutex_init(&client_ctx->msg_queue_lock);
+	mutex_init(&client_ctx->enrty_queue_lock);
 	INIT_LIST_HEAD(&client_ctx->msg_queue);
 	init_waitqueue_head(&client_ctx->msg_wait);
 	if (vcd_get_ion_status()) {

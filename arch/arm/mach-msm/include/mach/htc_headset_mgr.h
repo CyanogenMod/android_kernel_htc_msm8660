@@ -66,6 +66,7 @@
 	__ATTR(_name, _mode, _show, _store)
 
 #define DRIVER_HS_MGR_RPC_SERVER	(1 << 0)
+#define DRIVER_HS_MGR_FLOAT_DET		(1 << 1)
 
 #define DEBUG_FLAG_LOG		(1 << 0)
 #define DEBUG_FLAG_ADC		(1 << 1)

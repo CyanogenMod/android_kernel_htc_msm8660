@@ -842,6 +842,7 @@ static int blissc_usb_product_id_match_array[] = {
 	0x0fd5, 0x0e2f, /* ums + diag + 9k diag + rmnet */
 	0x0fd4, 0x0e30, /* ums + adb + diag + 9k diag + rmnet */
 	0x0ff9, 0x0ccb, /* ums */
+	0x0ffc, 0x0e7d, /* adb + rndis, tethering with USB debugging */
 	-1,
 };
 

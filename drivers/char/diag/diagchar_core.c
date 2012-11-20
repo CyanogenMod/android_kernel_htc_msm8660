@@ -281,10 +281,10 @@ static int diagchar_open(struct inode *inode, struct file *file)
 			} else {
 				mutex_unlock(&driver->diagchar_mutex);
 				pr_alert("Max client limit for DIAG reached\n");
-				pr_info("Cannot open handle %s"
+				DIAG_INFO("Cannot open handle %s"
 					   " %d", current->comm, current->tgid);
 				for (i = 0; i < driver->num_clients; i++)
-					pr_debug("%d) %s PID=%d", i, driver->
+					DIAG_WARNING("%d) %s PID=%d", i, driver->
 						client_map[i].name,
 						driver->client_map[i].pid);
 				return -ENOMEM;
@@ -552,7 +552,7 @@ static int diagchar_read(struct file *file, char __user *buf, size_t count,
 			index = i;
 
 	if (index == -1) {
-		DIAG_ERR("%s:%s(parent:%s): tgid=%d"
+		DIAG_ERR("%s:%s(parent:%s): tgid=%d "
 				"Client PID not found in table\n", __func__,
 				current->comm, current->parent->comm, current->tgid);
 		for (i = 0; i < driver->num_clients; i++)
@@ -1103,7 +1103,13 @@ static int diagcharmdm_open(struct inode *inode, struct file *file)
 			strncpy(driver->mdmclient_map[i].name, current->comm, 20);
 			driver->mdmclient_map[i].name[19] = '\0';
 		} else {
+			mutex_unlock(&driver->diagcharmdm_mutex);
 			DIAG_INFO("%s:reach max client count\n", __func__);
+			for (i = 0; i < driver->num_clients; i++)
+				DIAG_WARNING("%d) %s PID=%d", i, driver->
+					mdmclient_map[i].name,
+					driver->mdmclient_map[i].pid);
+			return -ENOMEM;
 		}
 
 		driver->mdmdata_ready[i] |= MSG_MASKS_TYPE;
@@ -1144,6 +1150,12 @@ static int diagcharmdm_close(struct inode *inode, struct file *file)
 				driver->mdmclient_map[i].pid = 0;
 				break;
 			}
+
+		if (i < driver->num_mdmclients)
+			DIAG_INFO("%s:#%d(%d) %s close\n", __func__,
+				i, current->tgid, current->comm);
+		else
+			DIAG_WARNING("%s: nothing close\n", __func__);
 		mutex_unlock(&driver->diagcharmdm_mutex);
 		return 0;
 	}
@@ -1199,9 +1211,11 @@ static int diagcharmdm_read(struct file *file, char __user *buf, size_t count,
 			index = i;
 
 	if (index == -1) {
-		DIAG_ERR("%s:%s(parent:%s): tgid=%d"
+		DIAG_ERR("%s:%s(parent:%s): tgid=%d "
 				"Client PID not found in table\n", __func__,
 				current->comm, current->parent->comm, current->tgid);
+		for (i = 0; i < driver->num_mdmclients; i++)
+			DIAG_ERR("\t#%d: %d\n", i, driver->mdmclient_map[i].pid);
 		return -EINVAL;
 	}
 

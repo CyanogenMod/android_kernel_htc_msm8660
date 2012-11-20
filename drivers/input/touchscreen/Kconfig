@@ -887,4 +887,13 @@ config TOUCHSCREEN_HIMAX_SH
 	    Haiping Qin <haiping_qin@htc.com>
 	    Allen Xu <allen_xu@htc.com>
 
+config TOUCHSCREEN_HIMAX_SH2
+	tristate "The Third Himax 8526A touchscreen"
+	depends on I2C
+	default n
+	help
+	  Maintained by Touch Team in Shanghai:
+	    Haiping Qin <haiping_qin@htc.com>
+	    Allen Xu <allen_xu@htc.com>
+
 endif

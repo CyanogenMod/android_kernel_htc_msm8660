@@ -21,9 +21,12 @@
 #include <linux/types.h>
 #include <linux/device.h>
 #include <mach/msm_fb.h>
+#include <linux/switch.h>
+#include <linux/workqueue.h>
+#include <linux/kthread.h>
 #include <linux/input.h>
-
 #include <linux/wakelock.h>
+#include <linux/htc_mode_server.h>
 #ifdef DBG
 #undef DBG
 #endif
@@ -38,6 +41,11 @@
 #define TXN_MAX 16384
 #define RXN_MAX 4096
 
+#ifdef CONFIG_ARCH_MSM7X30
+#define PRJ_WIDTH 480
+#define PRJ_HEIGHT 800
+#endif
+
 /* number of rx and tx requests to allocate */
 #define PROJ_RX_REQ_MAX 4
 
@@ -50,9 +58,14 @@
 #define BITSPIXEL 16
 #define PROJECTOR_FUNCTION_NAME "projector"
 
+#define htc_mode_info(fmt, args...) \
+	printk(KERN_INFO "[htc_mode] " pr_fmt(fmt), ## args)
+
 static struct wake_lock prj_idle_wake_lock;
 static int keypad_code[] = {KEY_WAKEUP, 0, 0, 0, KEY_HOME, KEY_MENU, KEY_BACK};
 static const char shortname[] = "android_projector";
+static const char cand_shortname[] = "htc_cand";
+static const char htcmode_shortname[] = "htcmode";
 
 struct projector_dev {
 	struct usb_function function;
@@ -82,7 +95,17 @@ struct projector_dev {
 	struct input_dev *keypad_input;
 	struct input_dev *touch_input;
 	char *fbaddr;
-	struct platform_device *pdev;
+
+	atomic_t cand_online;
+	struct switch_dev cand_sdev;
+	struct switch_dev htcmode_sdev;
+	struct workqueue_struct *prj_wq;
+	struct work_struct notifier_work;
+	struct work_struct htcmode_notifier_work;
+	u8 htcmode_notify_pending;
+
+	/* HTC Mode Protocol Info */
+	struct htcmode_protocol *htcmode_proto;
 };
 
 static struct usb_interface_descriptor projector_interface_desc = {
@@ -157,6 +180,34 @@ static struct usb_gadget_strings *projector_strings[] = {
 };
 static struct projector_dev _projector_dev;
 struct device prj_dev;
+
+struct workqueue_struct *wq_display;
+struct work_struct send_fb_work;
+static int start_send_fb;
+
+
+struct size {
+	int w;
+	int h;
+};
+
+enum {
+    NOT_ON_AUTOBOT,
+    DOCK_ON_AUTOBOT,
+    HTC_MODE_RUNNING
+};
+/* the value of htc_mode_status should be one of above status */
+atomic_t htc_mode_status = ATOMIC_INIT(0);
+
+static void usb_setup_andriod_projector(struct work_struct *work);
+static DECLARE_WORK(conf_usb_work, usb_setup_andriod_projector);
+
+
+static void usb_setup_andriod_projector(struct work_struct *work)
+{
+	android_switch_htc_mode();
+	htc_mode_enable(1);
+}
 
 static inline struct projector_dev *proj_func_to_dev(struct usb_function *f)
 {
@@ -254,8 +305,8 @@ static void projector_send_touch_event(struct projector_dev *dev,
 	int iPenType, int iX, int iY)
 {
 	struct input_dev *tdev = dev->touch_input;
-    static int b_prePenDown = false;
-    static int b_firstPenDown = true;
+	static int b_prePenDown = false;
+	static int b_firstPenDown = true;
 	static int iCal_LastX;
 	static int iCal_LastY;
 	static int iReportCount;
@@ -325,6 +376,10 @@ static void projector_send_Key_event(struct projector_dev *ctxt,
 	input_sync(kdev);
 }
 
+#ifdef CONFIG_ARCH_MSM7X30
+extern char *get_fb_addr(void);
+#endif
+
 static void send_fb(struct projector_dev *ctxt)
 {
 
@@ -333,10 +388,14 @@ static void send_fb(struct projector_dev *ctxt)
 	int xfer;
 	int count = ctxt->framesize;
 
+#ifdef CONFIG_ARCH_MSM7X30
+	frame = get_fb_addr();
+#else
 	if (msmfb_get_fb_area())
 		frame = (ctxt->fbaddr + ctxt->framesize);
 	else
 		frame = ctxt->fbaddr;
+#endif
 
 	while (count > 0) {
 		req = proj_req_get(ctxt, &ctxt->tx_idle);
@@ -358,6 +417,62 @@ static void send_fb(struct projector_dev *ctxt)
 		}
 	}
 }
+
+static void send_fb2(struct projector_dev *ctxt)
+{
+	struct usb_request *req;
+	char *frame;
+	int xfer;
+	int count = ctxt->framesize;
+
+#ifdef CONFIG_ARCH_MSM7X30
+	frame = get_fb_addr();
+#else
+	if (msmfb_get_fb_area())
+		frame = (ctxt->fbaddr + ctxt->framesize);
+	else
+		frame = ctxt->fbaddr;
+#endif
+
+	while (count > 0 && start_send_fb) {
+
+		while (!(req = proj_req_get(ctxt, &ctxt->tx_idle))) {
+			msleep(1);
+
+			if (!start_send_fb)
+				break;
+		}
+
+		if (req) {
+			xfer = count > TXN_MAX? TXN_MAX : count;
+			req->length = xfer;
+//			printk(KERN_ERR "%s: %p\n", __func__, frame);
+			memcpy(req->buf, frame, xfer);
+			if (usb_ep_queue(ctxt->ep_in, req, GFP_ATOMIC) < 0) {
+				proj_req_put(ctxt, &ctxt->tx_idle, req);
+				printk(KERN_WARNING "%s: failed to queue req"
+					    " %p\n", __func__, req);
+				break;
+			}
+			count -= xfer;
+			frame += xfer;
+		} else {
+			printk(KERN_ERR "send_fb: no req to send\n");
+			break;
+		}
+	}
+}
+
+void send_fb_do_work(struct work_struct *work)
+{
+	while (start_send_fb) {
+		send_fb2(&_projector_dev);
+		msleep(1);
+	}
+}
+
+
+
 static void send_info(struct projector_dev *ctxt)
 {
 	struct usb_request *req;
@@ -386,6 +501,78 @@ static void send_info(struct projector_dev *ctxt)
 		printk(KERN_INFO "%s: no req to send\n", __func__);
 }
 
+
+static void send_server_info(struct projector_dev *ctxt)
+{
+	struct usb_request *req;
+
+	req = proj_req_get(ctxt, &ctxt->tx_idle);
+	if (req) {
+		req->length = sizeof(struct msm_server_info);
+		memcpy(req->buf, &ctxt->htcmode_proto->server_info, req->length);
+		if (usb_ep_queue(ctxt->ep_in, req, GFP_ATOMIC) < 0) {
+			proj_req_put(ctxt, &ctxt->tx_idle, req);
+			printk(KERN_WARNING "%s: failed to queue req %p\n",
+				__func__, req);
+		}
+	} else {
+		printk(KERN_INFO "%s: no req to send\n", __func__);
+	}
+}
+
+
+struct size rotate(struct size v)
+{
+	struct size r;
+	r.w = v.h;
+	r.h = v.w;
+	return r;
+}
+
+static struct size get_projection_size(struct projector_dev *ctxt, struct msm_client_info *client_info)
+{
+	int server_width = 0;
+	int server_height = 0;
+	struct size client;
+	struct size server;
+	struct size ret;
+	int perserve_aspect_ratio = client_info->display_conf & (1 << 0);
+	int server_orientation = 0;
+	int client_orientation = (client_info->width > client_info->height);
+	int align_w = 0;
+
+	server_width = ctxt->width;
+	server_height = ctxt->height;
+
+	server_orientation = (server_width > server_height);
+
+	printk(KERN_INFO "%s(): perserve_aspect_ratio= %d\n", __func__, perserve_aspect_ratio);
+
+	client.w = client_info->width;
+	client.h = client_info->height;
+	server.w = server_width;
+	server.h = server_height;
+
+	if (server_orientation != client_orientation)
+		client = rotate(client);
+
+	align_w = client.h * server.w > server.h * client.w;
+
+	if (perserve_aspect_ratio) {
+		if (align_w) {
+			ret.w = client.w;
+			ret.h = (client.w * server.h) / server.w;
+		} else {
+			ret.w = (client.h * server.w) / server.h;
+			ret.h = client.h;
+		}
+	} else {
+		ret = client;
+	}
+	return ret;
+}
+
+
 static void projector_get_msmfb(struct projector_dev *ctxt)
 {
     struct msm_fb_info fb_info;
@@ -393,12 +580,21 @@ static void projector_get_msmfb(struct projector_dev *ctxt)
 	msmfb_get_var(&fb_info);
 
 	ctxt->bitsPixel = BITSPIXEL;
+
+#ifdef CONFIG_ARCH_MSM7X30
+	/* TODO: don't use fixed values */
+	ctxt->width = PRJ_WIDTH;
+	ctxt->height = PRJ_HEIGHT;
+	ctxt->fbaddr = get_fb_addr();
+	printk(KERN_INFO "projector: width %d, height %d, fb1 %p\n",
+		fb_info.xres, fb_info.yres, ctxt->fbaddr);
+#else
 	ctxt->width = fb_info.xres;
 	ctxt->height = fb_info.yres;
 	ctxt->fbaddr = fb_info.fb_addr;
 	printk(KERN_INFO "projector: width %d, height %d\n",
-		   fb_info.xres, fb_info.yres);
-
+		fb_info.xres, fb_info.yres);
+#endif
 	ctxt->framesize = (ctxt->width)*(ctxt->height)*2;
 	printk(KERN_INFO "projector: width %d, height %d %d\n",
 		   fb_info.xres, fb_info.yres, ctxt->framesize);
@@ -416,6 +612,7 @@ static void projector_complete_out(struct usb_ep *ep, struct usb_request *req)
 	unsigned char *data = req->buf;
 	int mouse_data[3];
 	int i;
+	struct size projector_size;
 	DBG("%s: status %d, %d bytes\n", __func__,
 		req->status, req->actual);
 
@@ -428,7 +625,20 @@ static void projector_complete_out(struct usb_ep *ep, struct usb_request *req)
 	/* for mouse event type, 1 :move, 2:down, 3:up */
 	mouse_data[0] = *((int *)(req->buf));
 
-	if (!strncmp("init", data, 4)) {
+	if ((data[0] == CLIENT_INFO_MESGID) && (req->actual == sizeof(struct msm_client_info))) {
+		memcpy(&ctxt->htcmode_proto->client_info, req->buf, sizeof(struct msm_client_info));
+
+		projector_size = get_projection_size(ctxt, &ctxt->htcmode_proto->client_info);
+		projector_get_msmfb(ctxt);
+
+		ctxt->htcmode_proto->server_info.mesg_id = SERVER_INFO_MESGID;
+		ctxt->htcmode_proto->server_info.width = projector_size.w;
+		ctxt->htcmode_proto->server_info.height = projector_size.h;
+		ctxt->htcmode_proto->server_info.pixel_format = PIXEL_FORMAT_RGB565;
+		ctxt->htcmode_proto->server_info.ctrl_conf = CTRL_CONF_TOUCH_EVENT_SUPPORTED |
+									  CTRL_CONF_NUM_SIMULTANEOUS_TOUCH;
+		send_server_info(&_projector_dev);
+	} else if (!strncmp("init", data, 4)) {
 		if (!ctxt->init_done) {
 			projector_get_msmfb(ctxt);
 			ctxt->init_done = 1;
@@ -444,6 +654,43 @@ static void projector_complete_out(struct usb_ep *ep, struct usb_request *req)
 			projector_send_Key_event(ctxt, 0);
 			ctxt->frame_count = 0;
 		}
+	} else if (!strncmp("startfb", data, 7)) {
+		start_send_fb = true;
+		queue_work(wq_display, &send_fb_work);
+
+		ctxt->frame_count++;
+
+		if (atomic_inc_return(&htc_mode_status) != HTC_MODE_RUNNING)
+			atomic_dec(&htc_mode_status);
+
+		htc_mode_info("startfb current htc_mode_status = %d\n",
+			    atomic_read(&htc_mode_status));
+		queue_work(ctxt->prj_wq, &ctxt->htcmode_notifier_work);
+
+		/* 30s send system wake code */
+		if (ctxt->frame_count == 30 * 30) {
+			projector_send_Key_event(ctxt, 0);
+			ctxt->frame_count = 0;
+		}
+	} else if (!strncmp("endfb", data, 5)) {
+		start_send_fb = false;
+		if (atomic_dec_return(&htc_mode_status) != DOCK_ON_AUTOBOT)
+			atomic_inc(&htc_mode_status);
+
+		usb_ep_fifo_flush(ctxt->ep_in);
+		htc_mode_info("endfb current htc_mode_status = %d\n",
+			    atomic_read(&htc_mode_status));
+		queue_work(ctxt->prj_wq, &ctxt->htcmode_notifier_work);
+	} else if (!strncmp("startcand", data, 9)) {
+		atomic_set(&ctxt->cand_online, 1);
+		htc_mode_info("startcand %d\n", atomic_read(&ctxt->cand_online));
+
+		queue_work(ctxt->prj_wq, &ctxt->notifier_work);
+	} else if (!strncmp("endcand", data, 7)) {
+		atomic_set(&ctxt->cand_online, 0);
+		htc_mode_info("endcand %d\n", atomic_read(&ctxt->cand_online));
+
+		queue_work(ctxt->prj_wq, &ctxt->notifier_work);
 	} else if (mouse_data[0] > 0) {
 		 if (mouse_data[0] < 4) {
 			for (i = 0; i < 3; i++)
@@ -570,6 +817,13 @@ projector_function_unbind(struct usb_configuration *c, struct usb_function *f)
 
 	dev->online = 0;
 	dev->error = 1;
+	switch_dev_unregister(&dev->cand_sdev);
+	switch_dev_unregister(&dev->htcmode_sdev);
+
+	if (dev->touch_input)
+		input_unregister_device(dev->touch_input);
+	if (dev->keypad_input)
+		input_unregister_device(dev->keypad_input);
 }
 
 static int projector_function_set_alt(struct usb_function *f,
@@ -577,6 +831,8 @@ static int projector_function_set_alt(struct usb_function *f,
 {
 	struct projector_dev	*dev = proj_func_to_dev(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
+	struct android_dev *adev = _android_dev;
+	struct android_usb_function *af;
 	int ret;
 
 	DBG("%s intf: %d alt: %d\n", __func__, intf, alt);
@@ -594,7 +850,14 @@ static int projector_function_set_alt(struct usb_function *f,
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
-	dev->online = 1;
+
+	dev->online = 0;
+	list_for_each_entry(af, &adev->enabled_functions, enabled_list) {
+		if (!strcmp(af->name, f->name)) {
+			dev->online = 1;
+			break;
+		}
+	}
 	projector_queue_out(dev);
 
 	return 0;
@@ -605,10 +868,16 @@ static void projector_function_disable(struct usb_function *f)
 	struct projector_dev	*dev = proj_func_to_dev(f);
 
 	DBG("projector_function_disable\n");
+
+	start_send_fb = false;
+
 	dev->online = 0;
 	dev->error = 1;
 	usb_ep_disable(dev->ep_in);
 	usb_ep_disable(dev->ep_out);
+
+	atomic_set(&dev->cand_online, 0);
+	queue_work(dev->prj_wq, &dev->notifier_work);
 
 	VDBG(dev->cdev, "%s disabled\n", dev->function.name);
 }
@@ -746,6 +1015,76 @@ static ssize_t show_enable(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(enable, 0664, show_enable, store_enable);
 #endif
 
+
+static void cand_online_notify(struct work_struct *w)
+{
+	struct projector_dev *dev = container_of(w,
+					struct projector_dev, notifier_work);
+	if (atomic_read(&dev->cand_online))
+		switch_set_state(&dev->cand_sdev, 1);
+	else
+		switch_set_state(&dev->cand_sdev, 0);
+}
+
+static void htcmode_status_notify(struct work_struct *w)
+{
+	struct projector_dev *dev = container_of(w,
+					struct projector_dev, htcmode_notifier_work);
+
+	switch_set_state(&dev->htcmode_sdev, atomic_read(&htc_mode_status));
+}
+
+/*
+ * 1: enable; 0: disable
+ */
+void htc_mode_enable(int enable)
+{
+	struct projector_dev *ctxt = &_projector_dev;
+
+	htc_mode_info("%s = %d\n", __func__, enable);
+	htc_mode_info("current htc_mode_status = %d\n",
+		    atomic_read(&htc_mode_status));
+
+	if (enable)
+		atomic_set(&htc_mode_status, DOCK_ON_AUTOBOT);
+	else
+		atomic_set(&htc_mode_status, NOT_ON_AUTOBOT);
+
+	if (ctxt->prj_wq)
+		queue_work(ctxt->prj_wq, &ctxt->htcmode_notifier_work);
+	else
+		ctxt->htcmode_notify_pending = 1;
+}
+
+int check_htc_mode_status(void)
+{
+	return atomic_read(&htc_mode_status);
+}
+
+static ssize_t print_cand_switch_name(struct switch_dev *sdev, char *buf)
+{
+	return sprintf(buf, "%s\n", cand_shortname);
+}
+
+static ssize_t print_cand_switch_state(struct switch_dev *cand_sdev, char *buf)
+{
+	struct projector_dev *dev = container_of(cand_sdev,
+					struct projector_dev, cand_sdev);
+	return sprintf(buf, "%s\n", (atomic_read(&dev->cand_online) ?
+		    "online" : "offline"));
+}
+
+static ssize_t print_htcmode_switch_name(struct switch_dev *sdev, char *buf)
+{
+	return sprintf(buf, "%s\n", htcmode_shortname);
+}
+
+static ssize_t print_htcmode_switch_state(struct switch_dev *htcmode_sdev, char *buf)
+{
+	return sprintf(buf, "%s\n", (atomic_read(&htc_mode_status)==HTC_MODE_RUNNING ?
+		    "projecting" : (atomic_read(&htc_mode_status)==DOCK_ON_AUTOBOT ? "online" : "offline")));
+}
+
 static int projector_bind_config(struct usb_configuration *c)
 {
 	struct projector_dev *dev = &_projector_dev;
@@ -753,13 +1092,33 @@ static int projector_bind_config(struct usb_configuration *c)
 	int ret = 0;
 
 	printk(KERN_INFO "projector_bind_config\n");
+	ret = usb_string_id(c->cdev);
+	if (ret < 0)
+		return ret;
+	projector_string_defs[0].id = ret;
+	projector_interface_desc.iInterface = ret;
 
-	if (projector_string_defs[0].id == 0) {
-		ret = usb_string_id(c->cdev);
-		if (ret < 0)
-			return ret;
-		projector_string_defs[0].id = ret;
-		projector_interface_desc.iInterface = ret;
+	dev->prj_wq = create_singlethread_workqueue("USB_PRJ");
+
+	INIT_WORK(&dev->notifier_work, cand_online_notify);
+	INIT_WORK(&dev->htcmode_notifier_work, htcmode_status_notify);
+
+	dev->cand_sdev.name = cand_shortname;
+	dev->cand_sdev.print_name = print_cand_switch_name;
+	dev->cand_sdev.print_state = print_cand_switch_state;
+	ret = switch_dev_register(&dev->cand_sdev);
+	if (ret < 0) {
+		printk(KERN_ERR "usb cand_sdev switch_dev_register register fail\n");
+		return ret;
+	}
+
+	dev->htcmode_sdev.name = htcmode_shortname;
+	dev->htcmode_sdev.print_name = print_htcmode_switch_name;
+	dev->htcmode_sdev.print_state = print_htcmode_switch_state;
+	ret = switch_dev_register(&dev->htcmode_sdev);
+	if (ret < 0) {
+		printk(KERN_ERR "usb htcmode_sdev switch_dev_register register fail\n");
+		return ret;
 	}
 
 	dev->cdev = c->cdev;
@@ -774,10 +1133,16 @@ static int projector_bind_config(struct usb_configuration *c)
 
 	msmfb_get_var(&fb_info);
 	dev->bitsPixel = BITSPIXEL;
+#ifdef CONFIG_ARCH_MSM7X30
+	/* TODO: don't use fixed values */
+	dev->width = PRJ_WIDTH;
+	dev->height = PRJ_HEIGHT;
+	dev->fbaddr = get_fb_addr();
+#else
 	dev->width = fb_info.xres;
 	dev->height = fb_info.yres;
-	dev->fbaddr = fb_info.fb_addr;
-
+    dev->fbaddr = fb_info.fb_addr;
+#endif
 	dev->rx_req_count = PROJ_RX_REQ_MAX;
 	dev->tx_req_count = (dev->width * dev->height * 2 / TXN_MAX) + 1;
 	printk(KERN_INFO "[USB][Projector]resolution: %u*%u"
@@ -793,17 +1158,31 @@ static int projector_bind_config(struct usb_configuration *c)
 	if (ret)
 		goto err;
 
+	wq_display = create_singlethread_workqueue("projector_mode");
+	if (!wq_display)
+		goto err;
+	INIT_WORK(&send_fb_work, send_fb_do_work);
+
+	if (dev->htcmode_notify_pending) {
+		dev->htcmode_notify_pending = 0;
+		queue_work(dev->prj_wq, &dev->htcmode_notifier_work);
+	}
+
 	return 0;
 err:
+	switch_dev_unregister(&dev->cand_sdev);
+	switch_dev_unregister(&dev->htcmode_sdev);
 	printk(KERN_ERR "projector gadget driver failed to initialize\n");
 	return ret;
 }
 
-static int projector_setup(void)
+static int projector_setup(struct htcmode_protocol *proto)
 {
 	struct projector_dev *dev = &_projector_dev;
 	dev->init_done = 0;
 	dev->frame_count = 0;
+	dev->htcmode_notify_pending = 0;
+	dev->htcmode_proto = proto;
 	wake_lock_init(&prj_idle_wake_lock, WAKE_LOCK_IDLE, "prj_idle_lock");
 
 	spin_lock_init(&dev->lock);
@@ -813,3 +1192,20 @@ static int projector_setup(void)
 	return 0;
 }
 
+static int projector_ctrlrequest(struct usb_composite_dev *cdev,
+				const struct usb_ctrlrequest *ctrl)
+{
+	int value = -EOPNOTSUPP;
+	struct projector_dev *dev = &_projector_dev;
+
+	if (((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_VENDOR) &&
+		(ctrl->bRequest == HTC_MODE_CONTROL_REQ)) {
+		if (check_htc_mode_status() == NOT_ON_AUTOBOT)
+			schedule_work(&conf_usb_work);
+		dev->htcmode_proto->version = le16_to_cpu(ctrl->wValue);
+		printk(KERN_INFO "HTC Mode version = 0x%04X\n", dev->htcmode_proto->version);
+		value = 0;
+	}
+
+	return value;
+}

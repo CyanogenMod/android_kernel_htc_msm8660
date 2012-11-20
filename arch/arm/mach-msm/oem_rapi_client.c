@@ -26,7 +26,7 @@
 #include <mach/msm_rpcrouter.h>
 #include <mach/oem_rapi_client.h>
 
-#define OEM_RAPI_PROG  0x3000006B
+#define OEM_RAPI_PROG  0x3001006B
 #define OEM_RAPI_VERS  0x00010001
 
 #define OEM_RAPI_NULL_PROC                        0

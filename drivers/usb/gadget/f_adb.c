@@ -27,8 +27,11 @@
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 
+#include <mach/board_htc.h>
+
 #define ADB_IOCTL_MAGIC 's'
 #define ADB_ERR_PAYLOAD_STUCK       _IOW(ADB_IOCTL_MAGIC, 0, unsigned)
+#define ADB_ATS_ENABLE       		_IOR(ADB_IOCTL_MAGIC, 1, unsigned)
 
 #define ADB_BULK_BUFFER_SIZE           4096
 
@@ -117,7 +120,7 @@ static struct usb_descriptor_header *hs_adb_descs[] = {
 
 /* temporary variable used between adb_open() and adb_gadget_bind() */
 static struct adb_dev *_adb_dev;
-int board_mfg_mode(void);
+int board_get_usb_ats(void);
 
 static inline struct adb_dev *func_to_adb(struct usb_function *f)
 {
@@ -414,7 +417,8 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 
 static int adb_open(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "adb_open\n");
+	printk(KERN_INFO "adb_open: %s(parent:%s): tgid=%d\n",
+			current->comm, current->parent->comm, current->tgid);
 	if (!_adb_dev)
 		return -ENODEV;
 
@@ -431,7 +435,8 @@ static int adb_open(struct inode *ip, struct file *fp)
 
 static int adb_release(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "adb_release\n");
+	printk(KERN_INFO "adb_release: %s(parent:%s): tgid=%d\n",
+			current->comm, current->parent->comm, current->tgid);
 	adb_unlock(&_adb_dev->open_excl);
 	return 0;
 }
@@ -454,14 +459,16 @@ static struct miscdevice adb_device = {
 int htc_usb_enable_function(char *name, int ebl);
 static int adb_enable_open(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "[USB] enabling adb\n");
+	printk(KERN_INFO "[USB] enabling adb: %s(parent:%s): tgid=%d\n",
+			current->comm, current->parent->comm, current->tgid);
 	htc_usb_enable_function("adb", 1);
 	return 0;
 }
 
 static int adb_enable_release(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "[USB] disabling adb\n");
+	printk(KERN_INFO "[USB] disabling adb: %s(parent:%s): tgid=%d\n",
+			current->comm, current->parent->comm, current->tgid);
 	htc_usb_enable_function("adb", 0);
 	return 0;
 }
@@ -474,6 +481,11 @@ static long adb_enable_ioctl(struct file *file,
 	switch (cmd) {
 	case ADB_ERR_PAYLOAD_STUCK: {
 		printk(KERN_INFO "[USB] adbd read payload stuck (reset ADB)\n");
+		break;
+	}
+	case ADB_ATS_ENABLE: {
+		printk(KERN_INFO "[USB] ATS enable =  %d\n",board_get_usb_ats());
+		rc = put_user(board_get_usb_ats(),(int __user *)arg);
 		break;
 	}
 	default:
@@ -640,9 +652,13 @@ static int adb_setup(void)
 	if (ret)
 		goto err;
 
-	ret = misc_register(&adb_enable_device);
-	if (ret)
-		goto err;
+	/* mfgkernel mode need this device node
+	 */
+	if ((board_mfg_mode() != 0) || (board_get_usb_ats() == 1)) {
+		ret = misc_register(&adb_enable_device);
+		if (ret)
+			goto err;
+	}
 
 	return 0;
 

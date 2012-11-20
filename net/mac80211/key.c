@@ -235,7 +235,7 @@ static void __ieee80211_key_replace(struct ieee80211_sub_if_data *sdata,
 				    struct ieee80211_key *old,
 				    struct ieee80211_key *new)
 {
-	int idx;
+	int idx = 0;
 	bool defunikey, defmultikey, defmgmtkey;
 
 	if (new)
@@ -246,8 +246,12 @@ static void __ieee80211_key_replace(struct ieee80211_sub_if_data *sdata,
 	} else if (sta) {
 		if (old)
 			idx = old->conf.keyidx;
-		else
+		else {
+			/*HTC_WIFI_START*/
+			if (new)
+			/*HTC_WIFI_END*/
 			idx = new->conf.keyidx;
+		}
 		rcu_assign_pointer(sta->gtk[idx], new);
 	} else {
 		WARN_ON(new && old && new->conf.keyidx != old->conf.keyidx);

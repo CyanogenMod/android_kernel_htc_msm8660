@@ -448,3 +448,19 @@ void board_get_sku_color_tag(char **ret_data)
 	*ret_data = sku_color_tag;
 }
 EXPORT_SYMBOL(board_get_sku_color_tag);
+
+static int usb_ats;
+int __init board_ats_init(char *s)
+{
+	usb_ats = simple_strtoul(s, 0, 10);
+	return 1;
+}
+__setup("ats=", board_ats_init);
+
+
+int board_get_usb_ats(void)
+{
+	return usb_ats;
+}
+
+EXPORT_SYMBOL(board_get_usb_ats);

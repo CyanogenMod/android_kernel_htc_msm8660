@@ -404,6 +404,8 @@ void arch_reset(char mode, const char *cmd)
 		/* The only situation modem user triggers reset is NV restore after erasing EFS. */
 		if (mode == RESTART_MODE_MODEM_USER_INVOKED)
 			set_restart_reason(RESTART_REASON_REBOOT);
+		else if (mode == RESTART_MODE_ERASE_EFS)
+			set_restart_reason(RESTART_REASON_ERASE_EFS);
 		else
 			set_restart_reason(RESTART_REASON_RAMDUMP);
 	} else {
@@ -417,7 +419,8 @@ void arch_reset(char mode, const char *cmd)
 		mode != RESTART_MODE_MODEM_UNWEDGE_TIMEOUT &&
 		mode != RESTART_MODE_MODEM_WATCHDOG_BITE &&
 		mode != RESTART_MODE_MODEM_ERROR_FATAL &&
-		mode != RESTART_MODE_APP_WATCHDOG_BARK
+		mode != RESTART_MODE_APP_WATCHDOG_BARK &&
+		mode != RESTART_MODE_ERASE_EFS
 		) {
 		/* final efs_sync */
 		printk(KERN_INFO "from %s\r\n", __func__);

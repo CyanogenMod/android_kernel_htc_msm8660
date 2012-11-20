@@ -41,6 +41,8 @@
 #include <media/msm_camera_sensor.h>
 #include <linux/syscalls.h>
 #include <linux/hrtimer.h>
+#include <linux/htc_flashlight.h>
+
 #ifdef CONFIG_CAMERA_ZSL
 #include "msm_vfe_8x60_ZSL.h"
 #else
@@ -3061,10 +3063,14 @@ static long msm_ioctl_config(struct file *filep, unsigned int cmd,
 		} else {
 			if (s_effectState == 1 && flash_info.flashtype == LED_FLASH) {
 				pr_info("[CAM] MSM_CAM_IOCTL_FLASH_CTRL %d\n", s_effectState);
-				if (flash_info.ctrl_data.led_state == 1)
-					flash_info.ctrl_data.led_state = 9;
-				else if (flash_info.ctrl_data.led_state == 2)
-					flash_info.ctrl_data.led_state = 8;
+				if (flash_info.ctrl_data.led_state == MSM_CAMERA_LED_LOW)
+					flash_info.ctrl_data.led_state = FL_MODE_CAMERA_EFFECT_PRE_FLASH;
+				else if (flash_info.ctrl_data.led_state == MSM_CAMERA_LED_HIGH)
+					flash_info.ctrl_data.led_state = FL_MODE_CAMERA_EFFECT_FLASH;
+			} else if (flash_info.flashtype == LED_FLASH) {
+				/* Correct camera defined MSM_CAMERA_LED_LOW(1) to map to flashlight defined FL_MODE_PRE_FLASH(3) */
+				if (flash_info.ctrl_data.led_state == MSM_CAMERA_LED_LOW)
+					flash_info.ctrl_data.led_state = FL_MODE_PRE_FLASH;
 			}
 			rc = msm_flash_ctrl(pmsm->sync->sdata, &flash_info);
 		}
@@ -4723,8 +4729,10 @@ int msm_camera_drv_start(struct platform_device *dev,
 #ifdef CONFIG_CAMERA_3D
 #ifdef CONFIG_MACH_SHOOTER_U
 	if (system_rev == 0x80 && get_engineerid() == 0x1) {
-#elif defined(CONFIG_MACH_SHOOTER)
+#elif defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_K)
 	if (get_engineerid() & 0x4) {
+#elif defined(CONFIG_MACH_SHOOTER_CT)
+	if (get_engineerid() == 0x0) {
 #endif
 		return 	msm_camera_drv_start_liteon(dev, sensor_probe);
 	}

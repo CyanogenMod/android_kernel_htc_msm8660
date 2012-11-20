@@ -10,3 +10,7 @@ config WIMAX_SQN
 	  If you choose to build a module, it'll be called sequans_sdio. Say M if
 	  unsure.
 
+config WIMAX_SDIO_HIGH_SPEED
+	tristate "WiMAX SDC CLK 48M support"
+	help
+	 yes means SDC CLK to 48M

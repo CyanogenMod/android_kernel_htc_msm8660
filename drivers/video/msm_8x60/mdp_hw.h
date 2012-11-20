@@ -70,8 +70,8 @@ int mdp_ppp_blit(const struct mdp_info *mdp, struct mdp_blit_req *req,
 
 void mdp_ppp_dump_debug(const struct mdp_info *mdp);
 
-extern int mipi_novatek_restart_vcounter(uint32_t mfd);
-extern uint32_t mipi_novatek_read_scan_line(uint32_t mfd);
+extern int mipi_novatek_restart_vcounter(void);
+extern uint32_t mipi_novatek_read_scan_line(void);
 
 #define mdp_writel(mdp, value, offset) writel(value, mdp->base + offset)
 #define mdp_readl(mdp, offset) readl(mdp->base + offset)

@@ -1,6 +1,3 @@
-
-source "drivers/video/msm/vidc/Kconfig"
-
 config FB_MSM
 	tristate "MSM Framebuffer support"
 	depends on FB && ARCH_MSM
@@ -290,6 +287,18 @@ config FB_MSM_MIPI_SIMULATOR_VIDEO
 config FB_MSM_OVERLAY_WRITEBACK
 	depends on FB_MSM_OVERLAY
         bool "MDP overlay write back mode enable"
+	---help---
+	  Support for MDP4 OVERLAY write back mode
+
+config FB_MSM_OVERLAY0_WRITEBACK
+	depends on FB_MSM_OVERLAY
+        bool "MDP overlay0 write back mode enable"
+	---help---
+	  Support for MDP4 OVERLAY0 write back mode
+
+config FB_MSM_WRITEBACK_MSM_PANEL
+	depends on FB_MSM_OVERLAY
+        bool "MDP overlay write back panel enable"
 	---help---
 	  Support for MDP4 OVERLAY write back mode
 

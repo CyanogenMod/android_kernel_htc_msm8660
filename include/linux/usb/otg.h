@@ -143,7 +143,7 @@ struct otg_transceiver {
 	int	(*send_event)(struct otg_transceiver *otg,
 			enum usb_otg_event event);
 
-	void	(*notify_usb_attached)(void);
+	void	(*notify_charger)(int connect_type);
 
 };
 

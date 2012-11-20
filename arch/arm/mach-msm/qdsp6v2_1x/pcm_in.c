@@ -416,7 +416,7 @@ static ssize_t pcm_in_read(struct file *file, char __user *buf,
 			len = size;
 		else {
 			len = count;
-			pr_aud_err("%s: short read data[%p]bytesavail[%d]"
+			pr_aud_info("%s: short read data[%p]bytesavail[%d]"
 				"bytesrequest[%d]"
 				"bytesrejected%d]\n",\
 				__func__, data, size,

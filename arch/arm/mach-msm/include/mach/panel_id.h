@@ -23,7 +23,8 @@ extern int panel_type;
 /* BIT19- BIT21 : display interface */
 /* BIT22- BIT24 : color depth */
 /* BIT25- BIT27 : lcm revision */
-/* BIT28- BIT31 : reserved */
+/* BIT28- BIT29 : mipi control mode */
+/* BIT30- BIT31 : reserved */
 
 #define BL_SHIFT        16
 #define BL_MASK         (0x7 << BL_SHIFT)
@@ -58,6 +59,11 @@ extern int panel_type;
 #define REV_2           (2 << REV_SHIFT)
 #define REV_3           (3 << REV_SHIFT)
 
+#define MIPI_MODE_SHIFT	28
+#define MIPI_MODE_MASK	(0x3 << MIPI_MODE_SHIFT)
+
+#define MIPI_CMD	(0 << MIPI_MODE_SHIFT)
+#define MIPI_VIDEO_ONLY	(1 << MIPI_MODE_SHIFT)
 
 #define PANEL_ID_NONE		(0x0)
 
@@ -130,10 +136,16 @@ extern int panel_type;
 #define PANEL_ID_PIO_SAMSUNG (0x35 | BL_MIPI | IF_MIPI | DEPTH_RGB888)
 #define PANEL_ID_PIO_SAMSUNG_C2 (0x35 | BL_MIPI | IF_MIPI | DEPTH_RGB888 | REV_1)
 #define PANEL_ID_PRIMODS_SONY    (0x4F | BL_MIPI | IF_MIPI | DEPTH_RGB888)
-#define PANEL_ID_PRIMODS_LG    (0x50 | BL_MIPI | IF_MIPI | DEPTH_RGB888)
-#define PANEL_ID_PRIMODD_AUO    (0x51 | BL_MIPI | IF_MIPI | DEPTH_RGB888)
-#define PANEL_ID_PRIMODD_LG    (0x52 | BL_MIPI | IF_MIPI | DEPTH_RGB888)
-
+#define PANEL_ID_PRIMODS_LG    (0x50 | BL_MIPI | IF_MIPI | DEPTH_RGB888 | MIPI_VIDEO_ONLY)
+#define PANEL_ID_PRIMODD_SONY    (0x51 | BL_MIPI | IF_MIPI | DEPTH_RGB888)
+#define PANEL_ID_PRIMODD_LG    (0x52 | BL_MIPI | IF_MIPI | DEPTH_RGB888 | MIPI_VIDEO_ONLY)
+#define PANEL_ID_GOLFU_AUO    (0x54 | BL_MIPI | IF_MIPI | DEPTH_RGB565)
+#define PANEL_ID_PRIMO_SONY    (0x55 | BL_MDDI | IF_MDDI | DEPTH_RGB888)
+#define PANEL_ID_PRITD_LG      (0x56 | BL_SPI	| IF_LCDC | DEPTH_RGB888)
+#define PANEL_ID_PRITD_HITACHI      (0x57 | BL_SPI | IF_LCDC | DEPTH_RGB888)
+#define PANEL_ID_PRIMODD_SHARP (0x58 | BL_MIPI | IF_MIPI | DEPTH_RGB888 | MIPI_VIDEO_ONLY)
+#define PANEL_ID_PRIMODS_SHARP (0x59 | BL_MIPI | IF_MIPI | DEPTH_RGB888 | MIPI_VIDEO_ONLY)
+#define PANEL_ID_PRITD_SHARP      (0x5A | BL_SPI	| IF_LCDC | DEPTH_RGB888)
 #define PANEL_ID_END            0xFFFF
 
 #endif	/* __PANEL_ID_H */

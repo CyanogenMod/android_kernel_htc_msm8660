@@ -1,7 +1,7 @@
 /* linux/arch/arm/mach-msm/timer.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -205,6 +205,10 @@ static DEFINE_PER_CPU(struct msm_clock_percpu_data[NR_TIMERS],
     msm_clocks_percpu);
 
 static DEFINE_PER_CPU(struct msm_clock *, msm_active_clock);
+
+
+static DEFINE_SPINLOCK(msm_fast_timer_lock);
+static int msm_fast_timer_enabled;
 
 static irqreturn_t msm_timer_interrupt(int irq, void *dev_id)
 {
@@ -776,6 +780,9 @@ int64_t msm_timer_enter_idle(void)
 	BUG_ON(clock != &msm_clocks[MSM_CLOCK_GPT] &&
 		clock != &msm_clocks[MSM_CLOCK_DGT]);
 
+	if (msm_fast_timer_enabled)
+		return 0;
+
 	msm_timer_sync_gpt_to_sclk(0);
 	if (clock != gpt_clk)
 		msm_timer_sync_to_gpt(clock, 0);
@@ -939,15 +946,17 @@ static DEFINE_CLOCK_DATA(cd);
  * Store the most recent timestamp read from hardware
  * in last_ns. This is useful for debugging crashes.
  */
-static u64 last_ns;
+static atomic64_t last_ns;
 
 unsigned long long notrace sched_clock(void)
 {
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
 	struct clocksource *cs = &clock->clocksource;
-	u32 cyc = cs->read(cs);
-	last_ns = cyc_to_sched_clock(&cd, cyc, ((u32)~0 >> clock->shift));
-	return last_ns;
+	u64 cyc = cs->read(cs);
+	u64 last_ns_local;
+	last_ns_local = cyc_to_sched_clock(&cd, cyc, ((u32)~0 >> clock->shift));
+	atomic64_set(&last_ns, last_ns_local);
+	return last_ns_local;
 }
 
 static void notrace msm_update_sched_clock(void)
@@ -972,6 +981,70 @@ static void __init msm_sched_clock_init(void)
 	init_sched_clock(&cd, msm_update_sched_clock, 32 - clock->shift,
 			 clock->freq);
 }
+
+
+/**
+ * msm_enable_fast_timer - Enable fast timer
+ *
+ * Prevents low power idle, but the caller must call msm_disable_fast_timer
+ * before suspend completes.
+ * Reference counted.
+ */
+void msm_enable_fast_timer(void)
+{
+	u32 max;
+	unsigned long irq_flags;
+	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
+	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
+
+	spin_lock_irqsave(&msm_fast_timer_lock, irq_flags);
+	if (msm_fast_timer_enabled++)
+		goto done;
+	if (clock == &msm_clocks[MSM_CLOCK_DGT]) {
+		pr_warning("msm_enable_fast_timer: timer already in use, "
+			"returned time will jump when hardware timer wraps\n");
+		goto done;
+	}
+	max = (dgt->clockevent.mult >> (dgt->clockevent.shift - 32)) - 1;
+	writel(max, dgt->regbase + TIMER_MATCH_VAL);
+	writel(TIMER_ENABLE_EN | TIMER_ENABLE_CLR_ON_MATCH_EN,
+		dgt->regbase + TIMER_ENABLE);
+done:
+	spin_unlock_irqrestore(&msm_fast_timer_lock, irq_flags);
+}
+
+/**
+ * msm_enable_fast_timer - Disable fast timer
+ */
+void msm_disable_fast_timer(void)
+{
+	unsigned long irq_flags;
+	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
+	struct msm_clock *clock = __get_cpu_var(msm_active_clock);
+
+	spin_lock_irqsave(&msm_fast_timer_lock, irq_flags);
+	if (!WARN(!msm_fast_timer_enabled, "msm_disable_fast_timer undeflow")
+		&& !(--msm_fast_timer_enabled)
+			&& (clock != &msm_clocks[MSM_CLOCK_DGT]))
+		writel(0, dgt->regbase + TIMER_ENABLE);
+	spin_unlock_irqrestore(&msm_fast_timer_lock, irq_flags);
+}
+
+/**
+ * msm_enable_fast_timer - Read fast timer
+ *
+ * Returns 32bit nanosecond time value.
+ */
+u32 msm_read_fast_timer(void)
+{
+	cycle_t ticks;
+	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
+
+	ticks = msm_read_timer_count(dgt, LOCAL_TIMER) >> (dgt->shift);
+	return clocksource_cyc2ns(ticks, dgt->clocksource.mult,
+					dgt->clocksource.shift);
+}
+
 static void __init msm_timer_init(void)
 {
 	int i;
@@ -1021,7 +1094,7 @@ static void __init msm_timer_init(void)
 		gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 		dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 	} else {
-		WARN_ON("Timer running on unknown hardware. Configure this! "
+		WARN(1, "Timer running on unknown hardware. Configure this! "
 			"Assuming default configuration.\n");
 		global_timer_offset = MSM_TMR0_BASE - MSM_TMR_BASE;
 		dgt->freq = 6750000;

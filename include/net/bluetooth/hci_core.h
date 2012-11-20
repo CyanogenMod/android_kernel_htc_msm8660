@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2011, Code Aurora Forum. All rights reserved.
+   Copyright (c) 2000-2001, 2010-2012, Code Aurora Forum. All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -240,8 +240,11 @@ struct hci_dev {
 	rwlock_t		adv_entries_lock;
 	struct timer_list	adv_timer;
 
-	struct timer_list	disc_timer;
-	struct timer_list	disc_le_timer;
+	struct timer_list	disco_timer;
+	struct timer_list	disco_le_timer;
+	__u8			disco_state;
+	int			disco_int_phase;
+	int			disco_int_count;
 
 	struct hci_dev_stats	stat;
 
@@ -313,6 +316,7 @@ struct hci_conn {
 
 	struct timer_list disc_timer;
 	struct timer_list idle_timer;
+	struct timer_list encrypt_pause_timer;
 
 	struct work_struct work_add;
 	struct work_struct work_del;
@@ -619,7 +623,7 @@ static inline void hci_conn_put(struct hci_conn *conn)
 			if (conn->state == BT_CONNECTED) {
 				timeo = msecs_to_jiffies(conn->disc_timeout);
 				if (!conn->out)
-					timeo *= 20;
+					timeo *= 4;
 			} else
 				timeo = msecs_to_jiffies(10);
 		} else
@@ -1037,10 +1041,16 @@ int mgmt_device_found(u16 index, bdaddr_t *bdaddr, u8 type, u8 le,
 int mgmt_remote_name(u16 index, bdaddr_t *bdaddr, u8 status, u8 *name);
 void mgmt_inquiry_started(u16 index);
 void mgmt_inquiry_complete_evt(u16 index, u8 status);
+void mgmt_disco_timeout(unsigned long data);
+void mgmt_disco_le_timeout(unsigned long data);
 int mgmt_encrypt_change(u16 index, bdaddr_t *bdaddr, u8 status);
 
 /* LE SMP Management interface */
 int le_user_confirm_reply(struct hci_conn *conn, u16 mgmt_op, void *cp);
+int mgmt_remote_class(u16 index, bdaddr_t *bdaddr, u8 dev_class[3]);
+int mgmt_remote_version(u16 index, bdaddr_t *bdaddr, u8 ver, u16 mnf,
+							u16 sub_ver);
+int mgmt_remote_features(u16 index, bdaddr_t *bdaddr, u8 features[8]);
 
 /* HCI info for socket */
 #define hci_pi(sk) ((struct hci_pinfo *) sk)

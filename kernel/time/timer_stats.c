@@ -338,7 +338,8 @@ static int tstats_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-#ifdef CONFIG_ARCH_MSM8X60_LTE
+#if defined(CONFIG_ARCH_MSM8X60_LTE) || defined(CONFIG_ARCH_MSM7X27)
+
 void htc_prink_name_offset(unsigned long addr)
 {
 	char symname[KSYM_NAME_LEN];
@@ -458,7 +459,7 @@ static ssize_t tstats_write(struct file *file, const char __user *buf,
 	return count;
 }
 
-#ifdef CONFIG_ARCH_MSM8X60_LTE
+#if defined(CONFIG_ARCH_MSM8X60_LTE) || defined(CONFIG_ARCH_MSM7X27)
 void htc_timer_stats_OnOff(char OnOff)
 {
 	mutex_lock(&show_mutex);

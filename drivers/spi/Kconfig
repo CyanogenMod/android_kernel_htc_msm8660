@@ -260,6 +260,12 @@ config SPI_AIC3254
 	help
 	  TI AIC3254 is external codec for audio RX
 
+config SPI_SP8803COM
+	tristate "SP 8803 COM SPI support"
+        default n
+	depends on ARCH_MSM7X30 || ARCH_MSM8X60
+	help
+	  SP 8803 COM is one modem
 config SPI_OMAP_UWIRE
 	tristate "OMAP1 MicroWire"
 	depends on ARCH_OMAP1
@@ -319,6 +325,11 @@ config SPI_PXA2XX_PCI
 
 config SPI_QSD
 	tristate "Qualcomm MSM SPI support"
+	default n
+	depends on ARCH_MSM_SCORPION && !MSM_SMP
+
+config SPI_DISPLAY
+	tristate "htc spi workaround"
 	default n
 	depends on ARCH_MSM_SCORPION && !MSM_SMP
 

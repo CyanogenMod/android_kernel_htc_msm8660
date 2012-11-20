@@ -852,7 +852,6 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	struct msm_hs_tx *tx = &msm_uport->tx;
 	struct circ_buf *tx_buf = &msm_uport->uport.state->xmit;
-	printk(KERN_INFO "msm_hs_submit_tx data");
 	if (uart_circ_empty(tx_buf) || uport->state->port.tty->stopped) {
 		msm_hs_stop_tx_locked(uport);
 		return;
@@ -1965,7 +1964,7 @@ static int __init msm_serial_hs_init(void)
 
 	ret = uart_register_driver(&msm_hs_driver);
 	if (unlikely(ret)) {
-		printk(KERN_ERR "%s failed to load\n", __FUNCTION__);
+		printk(KERN_WARNING "%s failed to load\n", __FUNCTION__);
 		return ret;
 	}
 	debug_base = debugfs_create_dir("msm_serial_hs", NULL);
@@ -1975,7 +1974,7 @@ static int __init msm_serial_hs_init(void)
 	ret = platform_driver_probe(&msm_serial_hs_platform_driver,
 					msm_hs_probe);
 	if (ret) {
-		printk(KERN_ERR "%s failed to load\n", __FUNCTION__);
+		printk(KERN_WARNING "%s failed to load\n", __FUNCTION__);
 		debugfs_remove_recursive(debug_base);
 		uart_unregister_driver(&msm_hs_driver);
 		return ret;

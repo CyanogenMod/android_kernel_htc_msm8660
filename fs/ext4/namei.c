@@ -1018,6 +1018,58 @@ errout:
 	return NULL;
 }
 
+#ifdef CONFIG_EXT4_WORKAROUND
+static int ext4_delete_entry(handle_t *handle,
+			     struct inode *dir,
+			     struct ext4_dir_entry_2 *de_del,
+			     struct buffer_head *bh);
+
+static int ext4_dir_delete_entry(struct inode *dir, struct dentry *dentry)
+{
+	int retval;
+	struct buffer_head *bh;
+	struct ext4_dir_entry_2 *de;
+	handle_t *handle;
+
+	/* Initialize quotas before so that eventual writes go
+	 * in separate transaction */
+	dquot_initialize(dir);
+	dquot_initialize(dentry->d_inode);
+
+	handle = ext4_journal_start(dir, EXT4_DELETE_TRANS_BLOCKS(dir->i_sb));
+	if (IS_ERR(handle)) {
+		pr_info("%s: ext4_journal_start failed\n", __func__);
+		return PTR_ERR(handle);
+	}
+
+	if (IS_DIRSYNC(dir))
+		ext4_handle_sync(handle);
+
+	retval = -ENOENT;
+	bh = ext4_find_entry(dir, &dentry->d_name, &de);
+	if (!bh) {
+		pr_info("%s: ext4_find_entry failed\n", __func__);
+		goto end_unlink;
+	}
+
+	retval = -EIO;
+	retval = ext4_delete_entry(handle, dir, de, bh);
+	if (retval) {
+		pr_info("%s: ext4_delete_entry failed\n", __func__);
+		goto end_unlink;
+	}
+	dir->i_ctime = dir->i_mtime = ext4_current_time(dir);
+	ext4_update_dx_flag(dir);
+	ext4_mark_inode_dirty(handle, dir);
+	retval = 0;
+
+end_unlink:
+	ext4_journal_stop(handle);
+	brelse(bh);
+	return retval;
+}
+#endif
+
 static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode *inode;
@@ -1039,10 +1091,18 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, stru
 		inode = ext4_iget(dir->i_sb, ino);
 		if (IS_ERR(inode)) {
 			if (PTR_ERR(inode) == -ESTALE) {
+				/* workaround for deleted inode referenced issue */
+				#ifdef CONFIG_EXT4_WORKAROUND
+				pr_err("ext4: deleted inode referenced(current %s, name %s, ino %u)\n",
+					current->comm, dentry->d_name.name, ino);
+				ext4_dir_delete_entry(dir, dentry);
+				return NULL;
+				#else
 				EXT4_ERROR_INODE(dir,
 						 "deleted inode referenced: %u",
 						 ino);
 				return ERR_PTR(-EIO);
+				#endif
 			} else {
 				return ERR_CAST(inode);
 			}

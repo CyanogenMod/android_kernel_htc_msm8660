@@ -37,7 +37,7 @@ config MSM_KGSL_ADRENO225
           chips.
 
 if MSM_KGSL_ADRENO200
-source "drivers/gpu/msm_adreno205/Kconfig"
+source "drivers/gpu/msm_adreno200/Kconfig"
 endif
 
 if MSM_KGSL_ADRENO205

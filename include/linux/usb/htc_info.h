@@ -15,6 +15,7 @@
 #ifndef __HTC_INFO__
 #define __HTC_INFO__
 
+#ifndef CONFIG_USB_MSM_72K
 #include <mach/board.h>
 struct usb_info {
 	int *phy_init_seq;
@@ -35,7 +36,9 @@ struct usb_info {
 	void (*usb_connected)(int);
 
 	enum usb_connect_type connect_type;
+	struct delayed_work chg_stop;
 };
+#endif
 
 extern ssize_t otg_show_usb_phy_setting(char *buf);
 extern ssize_t otg_store_usb_phy_setting(const char *buf, size_t count);
@@ -47,6 +50,10 @@ extern void android_set_serialno(char *serialno);
 extern void android_force_reset(void);
 extern int htc_usb_enable_function(char *name, int ebl);
 
+extern void htc_mode_enable(int enable);
+extern int check_htc_mode_status(void);
+extern void android_switch_adb_ums(void);
+extern void android_switch_htc_mode(void);
 
 #ifdef err
 #undef err

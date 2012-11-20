@@ -1207,6 +1207,9 @@ static void ieee80211_mgd_probe_ap_send(struct ieee80211_sub_if_data *sdata)
 		ieee80211_send_nullfunc(sdata->local, sdata, 0);
 	} else {
 		ssid = ieee80211_bss_get_ie(ifmgd->associated, WLAN_EID_SSID);
+		/*HTC_WIFI_START*/
+		if (ssid)
+		/*HTC_WIFI_END*/
 		ieee80211_send_probe_req(sdata, dst, ssid + 2, ssid[1], NULL, 0);
 	}
 
@@ -1279,7 +1282,7 @@ struct sk_buff *ieee80211_ap_probereq_get(struct ieee80211_hw *hw,
 {
 	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
-	struct sk_buff *skb;
+	struct sk_buff *skb = NULL;
 	const u8 *ssid;
 
 	if (WARN_ON(sdata->vif.type != NL80211_IFTYPE_STATION))
@@ -1291,6 +1294,9 @@ struct sk_buff *ieee80211_ap_probereq_get(struct ieee80211_hw *hw,
 		return NULL;
 
 	ssid = ieee80211_bss_get_ie(ifmgd->associated, WLAN_EID_SSID);
+	/*HTC_WIFI_START*/
+	if (ssid)
+	/*HTC_WIFI_END*/
 	skb = ieee80211_build_probe_req(sdata, ifmgd->associated->bssid,
 					ssid + 2, ssid[1], NULL, 0);
 
@@ -2354,6 +2360,9 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 	}
 
 	ssid = ieee80211_bss_get_ie(req->bss, WLAN_EID_SSID);
+	/*HTC_WIFI_START*/
+	if (ssid)
+	/*HTC_WIFI_END*/
 	memcpy(wk->probe_auth.ssid, ssid + 2, ssid[1]);
 	wk->probe_auth.ssid_len = ssid[1];
 
@@ -2509,6 +2518,9 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 	}
 
 	ssid = ieee80211_bss_get_ie(req->bss, WLAN_EID_SSID);
+	/*HTC_WIFI_START*/
+	if (ssid)
+	/*HTC_WIFI_END*/
 	memcpy(wk->assoc.ssid, ssid + 2, ssid[1]);
 	wk->assoc.ssid_len = ssid[1];
 
