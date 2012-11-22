@@ -41,7 +41,9 @@ extern struct dsi_cmd_desc *mipi_power_off_cmd;
 extern int mipi_power_on_cmd_size;
 extern int mipi_power_off_cmd_size;
 extern char ptype[60];
+#if defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_U)
 extern atomic_t g_3D_mode;
+#endif
 
 #endif  /* MIPI_NOVATEK_BLUE_H */
 
