@@ -7668,7 +7668,9 @@ get_softap_auto_channel(struct net_device *dev, struct ap_profile *ap)
 	int updown = 0;
 	wlc_ssid_t null_ssid;
 	int res = 0;
+#ifdef AP_ONLY
 	int spec = 0;
+#endif
 #ifndef AP_ONLY
 	int iolen = 0;
 	int mkvar_err = 0;
@@ -8748,7 +8750,7 @@ iwpriv_en_ap_bss(
 	
 #ifndef AP_ONLY
 	if (ap_eth_ctl.thr_pid >= 0) {
-		if (!wait_for_completion_timeout(&ap_eth_ctl->completed, 2*HZ))
+		if (!wait_for_completion_timeout(&ap_eth_ctl.completed, 2*HZ))
 		{
 			WL_ERROR(("Can't get AP interface!\n"));
 			return -1;
