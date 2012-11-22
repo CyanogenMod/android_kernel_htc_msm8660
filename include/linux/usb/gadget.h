@@ -57,6 +57,7 @@ struct usb_ep;
  *	Note that for writes (IN transfers) some data bytes may still
  *	reside in a device-side FIFO when the request is reported as
  *	complete.
+ *@udc_priv: Vendor private data in usage by the UDC.
  *
  * These are allocated/freed through the endpoint they're used with.  The
  * hardware's driver can add extra per-request data to the memory it returns,
@@ -92,6 +93,7 @@ struct usb_request {
 
 	int			status;
 	unsigned		actual;
+	unsigned		udc_priv;
 };
 
 /*-------------------------------------------------------------------------*/
@@ -111,7 +113,6 @@ struct usb_ep_ops {
 	struct usb_request *(*alloc_request) (struct usb_ep *ep,
 		gfp_t gfp_flags);
 	void (*free_request) (struct usb_ep *ep, struct usb_request *req);
-
 	int (*queue) (struct usb_ep *ep, struct usb_request *req,
 		gfp_t gfp_flags);
 	int (*dequeue) (struct usb_ep *ep, struct usb_request *req);
@@ -430,7 +431,6 @@ struct usb_gadget_ops {
 	int	(*pullup) (struct usb_gadget *, int is_on);
 	int	(*ioctl)(struct usb_gadget *,
 				unsigned code, unsigned long param);
-	int	(*req_reset) (struct usb_gadget *);
 };
 
 /**
@@ -700,12 +700,6 @@ static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 0);
 }
 
-static inline int usb_gadget_request_reset(struct usb_gadget *gadget)
-{
-	if (!gadget->ops->req_reset)
-		return -EOPNOTSUPP;
-	return gadget->ops->req_reset(gadget);
-}
 
 /*-------------------------------------------------------------------------*/
 
@@ -781,7 +775,6 @@ struct usb_gadget_driver {
 	int			(*setup)(struct usb_gadget *,
 					const struct usb_ctrlrequest *);
 	void			(*disconnect)(struct usb_gadget *);
-	void			(*mute_disconnect)(struct usb_gadget *);
 	void			(*suspend)(struct usb_gadget *);
 	void			(*resume)(struct usb_gadget *);
 

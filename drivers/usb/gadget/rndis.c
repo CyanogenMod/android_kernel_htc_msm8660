@@ -605,12 +605,12 @@ static int rndis_init_response(int configNr, rndis_init_msg_type *buf)
 	resp->MinorVersion = cpu_to_le32(RNDIS_MINOR_VERSION);
 	resp->DeviceFlags = cpu_to_le32(RNDIS_DF_CONNECTIONLESS);
 	resp->Medium = cpu_to_le32(RNDIS_MEDIUM_802_3);
-	resp->MaxPacketsPerTransfer = cpu_to_le32(1);
-	resp->MaxTransferSize = cpu_to_le32(
-		  params->dev->mtu
+	resp->MaxPacketsPerTransfer = cpu_to_le32(TX_SKB_HOLD_THRESHOLD);
+	resp->MaxTransferSize = cpu_to_le32(TX_SKB_HOLD_THRESHOLD *
+		(params->dev->mtu
 		+ sizeof(struct ethhdr)
 		+ sizeof(struct rndis_packet_msg_type)
-		+ 22);
+		+ 22));
 	resp->PacketAlignmentFactor = cpu_to_le32(0);
 	resp->AFListOffset = cpu_to_le32(0);
 	resp->AFListSize = cpu_to_le32(0);
@@ -1166,14 +1166,10 @@ static struct proc_dir_entry *rndis_connect_state [RNDIS_MAX_CONFIGS];
 
 #endif /* CONFIG_USB_GADGET_DEBUG_FILES */
 
-static bool rndis_initialized;
 
 int rndis_init(void)
 {
 	u8 i;
-
-	if (rndis_initialized)
-		return 0;
 
 	for (i = 0; i < RNDIS_MAX_CONFIGS; i++) {
 #ifdef	CONFIG_USB_GADGET_DEBUG_FILES
@@ -1201,7 +1197,6 @@ int rndis_init(void)
 		INIT_LIST_HEAD(&(rndis_per_dev_params[i].resp_queue));
 	}
 
-	rndis_initialized = true;
 	return 0;
 }
 
@@ -1210,13 +1205,7 @@ void rndis_exit(void)
 #ifdef CONFIG_USB_GADGET_DEBUG_FILES
 	u8 i;
 	char name[20];
-#endif
 
-	if (!rndis_initialized)
-		return;
-	rndis_initialized = false;
-
-#ifdef CONFIG_USB_GADGET_DEBUG_FILES
 	for (i = 0; i < RNDIS_MAX_CONFIGS; i++) {
 		sprintf(name, NAME_TEMPLATE, i);
 		remove_proc_entry(name, NULL);

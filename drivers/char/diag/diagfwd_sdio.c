@@ -32,32 +32,19 @@
 void __diag_sdio_send_req(void)
 {
 	int r = 0;
-	void *buf = NULL;
-	int *in_busy_ptr = NULL;
-	struct diag_request *write_ptr_modem = NULL;
-	int retry = 0, type;
+	void *buf = driver->buf_in_sdio;
 
-	if (!driver->in_busy_sdio_1) {
-		buf = driver->buf_in_sdio_1;
-		write_ptr_modem = driver->write_ptr_mdm_1;
-		in_busy_ptr = &(driver->in_busy_sdio_1);
-	} else if (!driver->in_busy_sdio_2) {
-		buf = driver->buf_in_sdio_2;
-		write_ptr_modem = driver->write_ptr_mdm_2;
-		in_busy_ptr = &(driver->in_busy_sdio_2);
-	}
-
-	if (driver->sdio_ch && buf) {
+	if (driver->sdio_ch && (!driver->in_busy_sdio)) {
 		r = sdio_read_avail(driver->sdio_ch);
 
 		if (r > IN_BUF_SIZE) {
 			if (r < MAX_IN_BUF_SIZE) {
 				pr_err("diag: SDIO sending"
-					  " in packets more than %d bytes", r);
+					  " packets more than %d bytes\n", r);
 				buf = krealloc(buf, r, GFP_KERNEL);
 			} else {
 				pr_err("diag: SDIO sending"
-			  " in packets more than %d bytes", MAX_IN_BUF_SIZE);
+			  " in packets more than %d bytes\n", MAX_IN_BUF_SIZE);
 				return;
 			}
 		}
@@ -65,60 +52,20 @@ void __diag_sdio_send_req(void)
 			if (!buf)
 				printk(KERN_INFO "Out of diagmem for SDIO\n");
 			else {
-drop:
 				APPEND_DEBUG('i');
 				sdio_read(driver->sdio_ch, buf, r);
-				if ((driver->qxdm2sd_drop) && (driver->logging_mode == USB_MODE)) {
-					/*Drop the diag payload */
-					DIAG_INFO("%s:Drop the diag payload :%d\n", __func__, retry);
-					print_hex_dump(KERN_DEBUG, "Drop Packet Data"
-						" from 9K(first 16 bytes)", DUMP_PREFIX_ADDRESS, 16, 1, buf, 16, 1);
-					driver->in_busy_sdio_1 = 0;
-					driver->in_busy_sdio_2 = 0;
-					r = sdio_read_avail(driver->sdio_ch);
-					if (++retry > 20) {
-						driver->qxdm2sd_drop = 0;
-						return;
-						}
-					if (r)
-						goto drop;
-					else {
-						driver->qxdm2sd_drop = 0;
-						return;
-						}
-				}
-				APPEND_DEBUG('j');
-
-				if (diag9k_debug_mask) {
-					switch (diag9k_debug_mask) {
-					case DIAGLOG_MODE_HEAD:
-						print_hex_dump(KERN_DEBUG, "Read Packet Data"
-						" from 9K(first 16 bytes)", DUMP_PREFIX_ADDRESS, 16, 1, buf, 16, 1);
-						break;
-					case DIAGLOG_MODE_FULL:
-						print_hex_dump(KERN_DEBUG, "Read Packet Data"
-						" from 9K(first 16 bytes)", DUMP_PREFIX_ADDRESS, 16, 1, buf, 16, 1);
-						print_hex_dump(KERN_DEBUG, "Read Packet Data"
-						" from 9K(last 16 bytes) ", 16, 1, DUMP_PREFIX_ADDRESS, buf+r-16, 16, 1);
-						break;
-					default:
-						print_hex_dump(KERN_DEBUG, "Read Packet Data"
-						" from 9K ", DUMP_PREFIX_ADDRESS, 16, 1, buf, r, 1);
-
-					}
-				}
-
-				type = checkcmd_modem_epst(buf);
-				if (type) {
-					modem_to_userspace(buf, r, type, 1);
+				if (((!driver->usb_connected) && (driver->
+					logging_mode == USB_MODE)) || (driver->
+					logging_mode == NO_LOGGING_MODE)) {
+					/* Drop the diag payload */
+					driver->in_busy_sdio = 0;
 					return;
 				}
-
-				write_ptr_modem->length = r;
-				*in_busy_ptr = 1;
+				APPEND_DEBUG('j');
+				driver->write_ptr_mdm->length = r;
+				driver->in_busy_sdio = 1;
 				diag_device_write(buf, SDIO_DATA,
-						 write_ptr_modem);
-
+						 driver->write_ptr_mdm);
 			}
 		}
 	}
@@ -129,6 +76,31 @@ static void diag_read_sdio_work_fn(struct work_struct *work)
 	__diag_sdio_send_req();
 }
 
+static void diag_sdio_notify(void *ctxt, unsigned event)
+{
+	if (event == SDIO_EVENT_DATA_READ_AVAIL)
+		queue_work(driver->diag_sdio_wq,
+				 &(driver->diag_read_sdio_work));
+
+	if (event == SDIO_EVENT_DATA_WRITE_AVAIL)
+		wake_up_interruptible(&driver->wait_q);
+}
+
+static int diag_sdio_close(void)
+{
+	queue_work(driver->diag_sdio_wq, &(driver->diag_close_sdio_work));
+	return 0;
+}
+
+static void diag_close_sdio_work_fn(struct work_struct *work)
+{
+	pr_debug("diag: sdio close called\n");
+	if (sdio_close(driver->sdio_ch))
+		pr_err("diag: could not close SDIO channel\n");
+	else
+		driver->sdio_ch = NULL; /* channel successfully closed */
+}
+
 int diagfwd_connect_sdio(void)
 {
 	int err;
@@ -136,10 +108,20 @@ int diagfwd_connect_sdio(void)
 	err = usb_diag_alloc_req(driver->mdm_ch, N_MDM_WRITE,
 							 N_MDM_READ);
 	if (err)
-		printk(KERN_ERR "diag: unable to alloc USB req on mdm ch");
+		pr_err("diag: unable to alloc USB req on mdm ch\n");
 
-	driver->in_busy_sdio_1 = 0;
-	driver->in_busy_sdio_2 = 0;
+	driver->in_busy_sdio = 0;
+	if (!driver->sdio_ch) {
+		err = sdio_open("SDIO_DIAG", &driver->sdio_ch, driver,
+							 diag_sdio_notify);
+		if (err)
+			pr_info("diag: could not open SDIO channel\n");
+		else
+			pr_info("diag: opened SDIO channel\n");
+	} else {
+		pr_info("diag: SDIO channel already open\n");
+	}
+
 	/* Poll USB channel to check for data*/
 	queue_work(driver->diag_sdio_wq, &(driver->diag_read_mdm_work));
 	/* Poll SDIO channel to check for data*/
@@ -149,18 +131,17 @@ int diagfwd_connect_sdio(void)
 
 int diagfwd_disconnect_sdio(void)
 {
-	/* driver->in_busy_sdio = 1; */
-	/* Clear variable to Flush remaining data from SDIO channel */
-	driver->in_busy_sdio_1 = 0;
-	driver->in_busy_sdio_2 = 0;
 	usb_diag_free_req(driver->mdm_ch);
+	if (driver->sdio_ch && (driver->logging_mode == USB_MODE)) {
+		driver->in_busy_sdio = 1;
+		diag_sdio_close();
+	}
 	return 0;
 }
 
 int diagfwd_write_complete_sdio(void)
 {
-	driver->in_busy_sdio_1 = 0;
-	driver->in_busy_sdio_2 = 0;
+	driver->in_busy_sdio = 0;
 	APPEND_DEBUG('q');
 	queue_work(driver->diag_sdio_wq, &(driver->diag_read_sdio_work));
 	return 0;
@@ -174,12 +155,14 @@ int diagfwd_read_complete_sdio(void)
 
 void diag_read_mdm_work_fn(struct work_struct *work)
 {
-		if (diag9k_debug_mask)
-			DIAG_INFO("%s \n", __func__);
-
 	if (driver->sdio_ch) {
-		wait_event_interruptible(driver->wait_q, (sdio_write_avail
-				(driver->sdio_ch) >= driver->read_len_mdm));
+		wait_event_interruptible(driver->wait_q, ((sdio_write_avail
+			(driver->sdio_ch) >= driver->read_len_mdm) ||
+				 !(driver->sdio_ch)));
+		if (!(driver->sdio_ch)) {
+			pr_alert("diag: sdio channel not valid");
+			return;
+		}
 		if (driver->sdio_ch && driver->usb_buf_mdm_out &&
 						 (driver->read_len_mdm > 0))
 			sdio_write(driver->sdio_ch, driver->usb_buf_mdm_out,
@@ -192,21 +175,9 @@ void diag_read_mdm_work_fn(struct work_struct *work)
 	}
 }
 
-static void diag_sdio_notify(void *ctxt, unsigned event)
-{
-	if (event == SDIO_EVENT_DATA_READ_AVAIL)
-		queue_work(driver->diag_sdio_wq,
-				 &(driver->diag_read_sdio_work));
-
-	if (event == SDIO_EVENT_DATA_WRITE_AVAIL)
-		wake_up_interruptible(&driver->wait_q);
-}
-
 static int diag_sdio_probe(struct platform_device *pdev)
 {
 	int err;
-	if (diag9k_debug_mask)
-		DIAG_INFO("%s\n", __func__);
 
 	err = sdio_open("SDIO_DIAG", &driver->sdio_ch, driver,
 							 diag_sdio_notify);
@@ -217,28 +188,15 @@ static int diag_sdio_probe(struct platform_device *pdev)
 		queue_work(driver->diag_sdio_wq, &(driver->diag_read_mdm_work));
 	}
 
-	driver->in_busy_sdio_1 = 0;
-	driver->in_busy_sdio_2 = 0;
-	driver->qxdm2sd_drop = 0;
-	sdio_diag_initialized = 1;
-
 	return err;
 }
 
 static int diag_sdio_remove(struct platform_device *pdev)
 {
-	queue_work(driver->diag_sdio_wq, &(driver->diag_remove_sdio_work));
-	return 0;
-}
-
-static void diag_remove_sdio_work_fn(struct work_struct *work)
-{
 	pr_debug("\n diag: sdio remove called");
-	/*Disable SDIO channel to prevent further read/write */
+	/* Disable SDIO channel to prevent further read/write */
 	driver->sdio_ch = NULL;
-	sdio_diag_initialized = 0;
-	driver->in_busy_sdio_1 = 1;
-	driver->in_busy_sdio_2 = 1;
+	return 0;
 }
 
 static int diagfwd_sdio_runtime_suspend(struct device *dev)
@@ -272,31 +230,19 @@ void diagfwd_sdio_init(void)
 {
 	int ret;
 
-	if (diag9k_debug_mask)
-		DIAG_INFO("%s\n", __func__);
-
 	driver->read_len_mdm = 0;
-	if (driver->buf_in_sdio_1 == NULL)
-		driver->buf_in_sdio_1 = kzalloc(IN_BUF_SIZE, GFP_KERNEL);
-		if (driver->buf_in_sdio_1 == NULL)
-			goto err;
-	if (driver->buf_in_sdio_2 == NULL)
-		driver->buf_in_sdio_2 = kzalloc(IN_BUF_SIZE, GFP_KERNEL);
-		if (driver->buf_in_sdio_2 == NULL)
+	if (driver->buf_in_sdio == NULL)
+		driver->buf_in_sdio = kzalloc(IN_BUF_SIZE, GFP_KERNEL);
+		if (driver->buf_in_sdio == NULL)
 			goto err;
 	if (driver->usb_buf_mdm_out  == NULL)
 		driver->usb_buf_mdm_out = kzalloc(USB_MAX_OUT_BUF, GFP_KERNEL);
 		if (driver->usb_buf_mdm_out == NULL)
 			goto err;
-	if (driver->write_ptr_mdm_1 == NULL)
-		driver->write_ptr_mdm_1 = kzalloc(
+	if (driver->write_ptr_mdm == NULL)
+		driver->write_ptr_mdm = kzalloc(
 			sizeof(struct diag_request), GFP_KERNEL);
-		if (driver->write_ptr_mdm_1 == NULL)
-			goto err;
-	if (driver->write_ptr_mdm_2 == NULL)
-		driver->write_ptr_mdm_2 = kzalloc(
-			sizeof(struct diag_request), GFP_KERNEL);
-		if (driver->write_ptr_mdm_2 == NULL)
+		if (driver->write_ptr_mdm == NULL)
 			goto err;
 	if (driver->usb_read_mdm_ptr == NULL)
 		driver->usb_read_mdm_ptr = kzalloc(
@@ -314,7 +260,7 @@ void diagfwd_sdio_init(void)
 	INIT_WORK(&(driver->diag_read_mdm_work), diag_read_mdm_work_fn);
 #endif
 	INIT_WORK(&(driver->diag_read_sdio_work), diag_read_sdio_work_fn);
-	INIT_WORK(&(driver->diag_remove_sdio_work), diag_remove_sdio_work_fn);
+	INIT_WORK(&(driver->diag_close_sdio_work), diag_close_sdio_work_fn);
 	ret = platform_driver_register(&msm_sdio_ch_driver);
 	if (ret)
 		printk(KERN_INFO "DIAG could not register SDIO device");
@@ -324,11 +270,9 @@ void diagfwd_sdio_init(void)
 	return;
 err:
 		printk(KERN_INFO "\n Could not initialize diag buf for SDIO");
-		kfree(driver->buf_in_sdio_1);
-		kfree(driver->buf_in_sdio_2);
+		kfree(driver->buf_in_sdio);
 		kfree(driver->usb_buf_mdm_out);
-		kfree(driver->write_ptr_mdm_1);
-		kfree(driver->write_ptr_mdm_2);
+		kfree(driver->write_ptr_mdm);
 		kfree(driver->usb_read_mdm_ptr);
 		if (driver->diag_sdio_wq)
 			destroy_workqueue(driver->diag_sdio_wq);
@@ -344,11 +288,9 @@ void diagfwd_sdio_exit(void)
 #ifdef CONFIG_DIAG_OVER_USB
 	usb_diag_close(driver->mdm_ch);
 #endif
-	kfree(driver->buf_in_sdio_1);
-	kfree(driver->buf_in_sdio_2);
+	kfree(driver->buf_in_sdio);
 	kfree(driver->usb_buf_mdm_out);
-	kfree(driver->write_ptr_mdm_1);
-	kfree(driver->write_ptr_mdm_2);
+	kfree(driver->write_ptr_mdm);
 	kfree(driver->usb_read_mdm_ptr);
 	destroy_workqueue(driver->diag_sdio_wq);
 }

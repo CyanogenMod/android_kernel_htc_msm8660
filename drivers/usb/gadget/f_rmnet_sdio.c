@@ -79,8 +79,6 @@ module_param(sdio_rx_fctrl_en_thld, uint, S_IRUGO | S_IWUSR);
 unsigned int sdio_rx_fctrl_dis_thld = RX_PKT_FLOW_CTRL_DISABLE;
 module_param(sdio_rx_fctrl_dis_thld, uint, S_IRUGO | S_IWUSR);
 
-struct rmnet_sdio_dev *__rmnet_dev;
-
 /* QMI requests & responses buffer*/
 struct rmnet_sdio_qmi_buf {
 	void *buf;
@@ -939,7 +937,7 @@ static void rmnet_sdio_free_buf(struct rmnet_sdio_dev *dev)
 		list_del(&req->list);
 		dev->tx_idle_len--;
 		req->buf = NULL;
-		rmnet_sdio_free_req(dev->epin, req);
+		rmnet_sdio_free_req(dev->epout, req);
 	}
 
 	/* free all usb requests in rx pool */
@@ -948,7 +946,7 @@ static void rmnet_sdio_free_buf(struct rmnet_sdio_dev *dev)
 		list_del(&req->list);
 		dev->rx_idle_len--;
 		req->buf = NULL;
-		rmnet_sdio_free_req(dev->epout, req);
+		rmnet_sdio_free_req(dev->epin, req);
 	}
 
 	/* free all buffers in qmi request pool */
@@ -1091,7 +1089,7 @@ static void rmnet_close_sdio_work(struct work_struct *w)
 		list_del(&req->list);
 		dev->tx_idle_len--;
 		req->buf = NULL;
-		rmnet_sdio_free_req(dev->epin, req);
+		rmnet_sdio_free_req(dev->epout, req);
 	}
 
 	/* free all usb requests in rx pool */
@@ -1100,7 +1098,7 @@ static void rmnet_close_sdio_work(struct work_struct *w)
 		list_del(&req->list);
 		dev->rx_idle_len--;
 		req->buf = NULL;
-		rmnet_sdio_free_req(dev->epout, req);
+		rmnet_sdio_free_req(dev->epin, req);
 	}
 
 	/* free all buffers in qmi request pool */
@@ -1197,7 +1195,6 @@ static void rmnet_open_sdio_work(struct work_struct *w)
 	struct usb_composite_dev *cdev = dev->cdev;
 	int ret;
 	static int retry_cnt;
-	static int open_flag = 0;
 
 	if (!test_bit(RMNET_SDIO_CH_OPEN, &dev->ctrl_ch_status)) {
 		/* Control channel for QMI messages */
@@ -1209,19 +1206,14 @@ static void rmnet_open_sdio_work(struct work_struct *w)
 			set_bit(RMNET_SDIO_CH_OPEN, &dev->ctrl_ch_status);
 	}
 
-	if (!open_flag) {
+	if (!test_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status)) {
 		/* Data channel for network packets */
-		if (!test_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status)) {
-			ret = msm_sdio_dmux_open(rmnet_sdio_data_ch, dev,
-					rmnet_sdio_data_receive_cb,
-					rmnet_sdio_data_write_done);
-			if (!ret) {
-				set_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status);
-				open_flag = 1;
-			}
-		}
-	} else
-		set_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status);
+		ret = msm_sdio_dmux_open(rmnet_sdio_data_ch, dev,
+				rmnet_sdio_data_receive_cb,
+				rmnet_sdio_data_write_done);
+		if (!ret)
+			set_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status);
+	}
 
 	if (test_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status) &&
 			test_bit(RMNET_SDIO_CH_OPEN, &dev->ctrl_ch_status)) {
@@ -1372,9 +1364,7 @@ rmnet_sdio_unbind(struct usb_configuration *c, struct usb_function *f)
 	dev->epout = dev->epin = dev->epnotify = NULL; /* release endpoints */
 
 	if (test_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status)) {
-		/* ToDo: Do not close dmux first because it wll cause mdm fatal
-		 */
-		/* msm_sdio_dmux_close(rmnet_sdio_data_ch); */
+		msm_sdio_dmux_close(rmnet_sdio_data_ch);
 		clear_bit(RMNET_SDIO_CH_OPEN, &dev->data_ch_status);
 	}
 
@@ -1385,7 +1375,7 @@ rmnet_sdio_unbind(struct usb_configuration *c, struct usb_function *f)
 
 	debugfs_remove_recursive(dev->dent);
 
-	/* kfree(dev); */
+	kfree(dev);
 }
 
 #if defined(CONFIG_DEBUG_FS)
@@ -1467,7 +1457,7 @@ const struct file_operations debug_rmnet_sdio_stats_ops = {
 
 static void rmnet_sdio_debugfs_init(struct rmnet_sdio_dev *dev)
 {
-	dev->dent = debugfs_create_dir("usb_rmnet", 0);
+	dev->dent = debugfs_create_dir("usb_rmnet_sdio", 0);
 	if (IS_ERR(dev->dent))
 		return;
 
@@ -1485,15 +1475,10 @@ int rmnet_sdio_function_add(struct usb_configuration *c)
 {
 	struct rmnet_sdio_dev *dev;
 	int ret;
-	int status;
 
-	if (!__rmnet_dev) {
-		dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-		if (!dev)
-			return -ENOMEM;
-		__rmnet_dev = dev;
-	} else
-		dev = __rmnet_dev;
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (!dev)
+		return -ENOMEM;
 
 	dev->wq = create_singlethread_workqueue("k_rmnet_work");
 	if (!dev->wq) {
@@ -1533,16 +1518,6 @@ int rmnet_sdio_function_add(struct usb_configuration *c)
 	dev->function.disable = rmnet_sdio_disable;
 	dev->function.suspend = rmnet_sdio_suspend;
 
-	if (rmnet_sdio_string_defs[0].id == 0) {
-		status = usb_string_id(c->cdev);
-		if (status < 0) {
-			pr_err("%s: return %d\n", __func__, status);
-			return status;
-		}
-		rmnet_sdio_string_defs[0].id = status;
-		rmnet_sdio_interface_desc.iInterface = status;
-	}
-
 	ret = usb_add_function(c, &dev->function);
 	if (ret)
 		goto free_wq;
@@ -1554,7 +1529,7 @@ int rmnet_sdio_function_add(struct usb_configuration *c)
 free_wq:
        destroy_workqueue(dev->wq);
 free_dev:
-       /* kfree(dev); */
+       kfree(dev);
 
        return ret;
 }

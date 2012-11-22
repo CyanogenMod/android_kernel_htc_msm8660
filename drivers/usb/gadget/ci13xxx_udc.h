@@ -25,6 +25,21 @@
 #define RX        (0)  /* similar to USB_DIR_OUT but can be used as an index */
 #define TX        (1)  /* similar to USB_DIR_IN  but can be used as an index */
 
+/* UDC private data:
+ *  16MSb - Vendor ID | 16 LSb Vendor private data
+ */
+#define CI13XX_REQ_VENDOR_ID(id)  (id & 0xFFFF0000UL)
+
+/* MSM specific */
+#define MSM_PIPE_ID_MASK         (0x1F)
+#define MSM_TX_PIPE_ID_OFS       (16)
+#define MSM_SPS_MODE             BIT(5)
+#define MSM_TBE                  BIT(6)
+#define MSM_ETD_TYPE             BIT(1)
+#define MSM_ETD_IOC              BIT(9)
+#define MSM_VENDOR_ID            BIT(16)
+#define MSM_EP_PIPE_ID_RESET_VAL 0x1F001F
+
 /******************************************************************************
  * STRUCTURES
  *****************************************************************************/
@@ -49,7 +64,7 @@ struct ci13xxx_td {
 #define TD_CURR_OFFSET        (0x0FFFUL <<  0)
 #define TD_FRAME_NUM          (0x07FFUL <<  0)
 #define TD_RESERVED_MASK      (0x0FFFUL <<  0)
-};
+} __attribute__ ((packed));
 
 /* DMA layout of queue heads */
 struct ci13xxx_qh {
