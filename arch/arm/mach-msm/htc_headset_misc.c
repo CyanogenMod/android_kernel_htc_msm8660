@@ -82,7 +82,7 @@ static irqreturn_t ext_hpin_irq_handler(int irq, void *dev_id)
 	if (hi->ext_hpin_irq_type & IRQF_TRIGGER_LOW)
 		hi->ext_hpin_debounce = HS_JIFFIES_INSERT;
 	else
-		hi->ext_hpin_debounce = HS_JIFFIES_REMOVE;
+		hi->ext_hpin_debounce = HS_JIFFIES_REMOVE_SHORT;
 
 	return IRQ_HANDLED;
 }
