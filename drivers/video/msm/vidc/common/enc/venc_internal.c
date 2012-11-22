@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,11 +28,20 @@
 #include <linux/android_pmem.h>
 #include <linux/clk.h>
 #include <mach/msm_subsystem_map.h>
-#include "vidc_type.h"
-#include "vcd_api.h"
+#include <media/msm/vidc_type.h>
+#include <media/msm/vcd_api.h>
+#include <media/msm/vidc_init.h>
 #include "venc_internal.h"
-#include "vidc_init.h"
 
+/*HTC_START*/
+extern u32 vidc_msg_debug;
+#define DBG(x...)				\
+	if (vidc_msg_debug) {			\
+		printk(KERN_DEBUG "[VID] " x);	\
+	}
+/*HTC_END*/
+
+#define ERR(x...) printk(KERN_ERR x)
 static unsigned int vidc_mmu_subsystem[] = {
 	MSM_SUBSYSTEM_VIDEO};
 
@@ -305,6 +314,42 @@ u32 vid_enc_set_get_bitrate(struct video_client_ctx *client_ctx,
 			return false;
 		}
 		venc_bitrate->target_bitrate = bit_rate.target_bitrate;
+	}
+	return true;
+}
+
+u32 vid_enc_set_get_extradata(struct video_client_ctx *client_ctx,
+		u32 *extradata_flag, u32 set_flag)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_meta_data_enable vcd_meta_data;
+	u32 vcd_status = VCD_ERR_FAIL;
+	if (!client_ctx || !extradata_flag)
+		return false;
+	vcd_property_hdr.prop_id = VCD_I_METADATA_ENABLE;
+	vcd_property_hdr.sz = sizeof(struct vcd_property_meta_data_enable);
+	if (set_flag) {
+		DBG("vcd_set_property: VCD_I_METADATA_ENABLE = %d\n",
+				*extradata_flag);
+		vcd_meta_data.meta_data_enable_flag = *extradata_flag;
+		vcd_status = vcd_set_property(client_ctx->vcd_handle,
+					&vcd_property_hdr, &vcd_meta_data);
+		if (vcd_status) {
+			ERR("%s(): Set VCD_I_METADATA_ENABLE Failed\n",
+				__func__);
+			return false;
+		}
+	} else {
+		vcd_status = vcd_get_property(client_ctx->vcd_handle,
+					&vcd_property_hdr, &vcd_meta_data);
+		if (vcd_status) {
+			ERR("%s(): Get VCD_I_METADATA_ENABLE Failed\n",
+				__func__);
+			return false;
+		}
+		*extradata_flag = vcd_meta_data.meta_data_enable_flag;
+		DBG("vcd_get_property: VCD_I_METADATA_ENABLE = %d\n",
+				*extradata_flag);
 	}
 	return true;
 }
@@ -1487,6 +1532,11 @@ u32 vid_enc_get_buffer_req(struct video_client_ctx *client_ctx,
 		venc_buf_req->alignment = buffer_req.align;
 		venc_buf_req->bufpoolid = buffer_req.buf_pool_id;
 		venc_buf_req->suffixsize = 0;
+		DBG("%s: actual_count=%d, align=%d, sz=%d, min_count=%d, "
+			"max_count=%d, buf_pool_id=%d\n", __func__,
+			buffer_req.actual_count, buffer_req.align,
+			buffer_req.sz, buffer_req.min_count,
+			buffer_req.max_count, buffer_req.buf_pool_id);
 	}
 	return status;
 }
@@ -1514,6 +1564,11 @@ u32 vid_enc_set_buffer_req(struct video_client_ctx *client_ctx,
 	buffer_req.align = venc_buf_req->alignment;
 	buffer_req.buf_pool_id = 0;
 
+	DBG("%s: actual_count=%d, align=%d, sz=%d, min_count=%d, "
+		"max_count=%d, buf_pool_id=%d\n", __func__,
+		buffer_req.actual_count, buffer_req.align, buffer_req.sz,
+		buffer_req.min_count, buffer_req.max_count,
+		buffer_req.buf_pool_id);
 	vcd_status = vcd_set_buffer_requirements(client_ctx->vcd_handle,
 				buffer, &buffer_req);
 
@@ -1602,6 +1657,9 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	u32 ion_flag = 0;
+#endif
 
 	u32 vcd_status = VCD_ERR_FAIL;
 
@@ -1632,6 +1690,20 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 
 		/* Rely on VCD using the same flags as OMX */
 		vcd_input_buffer.flags = input_frame_info->flags;
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
+				pmem_fd, kernel_vaddr, buffer_index);
+
+		if (vcd_input_buffer.data_len > 0) {
+			if (ion_flag == CACHED) {
+				clean_caches(
+				(unsigned long) vcd_input_buffer.virtual,
+				(unsigned long) vcd_input_buffer.data_len,
+				(phy_addr + input_frame_info->offset));
+			}
+		}
+#endif
 
 		vcd_status = vcd_encode_frame(client_ctx->vcd_handle,
 		&vcd_input_buffer);
@@ -1739,7 +1811,7 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 	} else {
 		client_ctx->recon_buffer_ion_handle[i] = ion_import_fd(
 				client_ctx->user_ion_client, control->pmem_fd);
-		if (!client_ctx->recon_buffer_ion_handle[i]) {
+		if (IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
 			ERR("%s(): get_ION_handle failed\n", __func__);
 			goto ion_error;
 		}
@@ -1822,7 +1894,7 @@ u32 vid_enc_free_recon_buffers(struct video_client_ctx *client_ctx,
 	}
 	len = sizeof(client_ctx->recon_buffer)/
 		sizeof(struct vcd_property_enc_recon_buffer);
-	pr_info(" %s() address  %p", __func__,
+	pr_err(" %s() address  %p", __func__,
 	venc_recon->pbuffer);
 	for (i = 0; i < len; i++) {
 		if (client_ctx->recon_buffer[i].user_virtual_addr

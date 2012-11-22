@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010, 2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,7 +16,11 @@
 
 #include <linux/msm_vidc_dec.h>
 #include <linux/cdev.h>
-#include "vidc_init.h"
+#include <media/msm/vidc_init.h>
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+#define NUM_OF_DRIVER_NODES 2
+#endif
 
 struct vid_dec_msg {
 	struct list_head list;
@@ -24,8 +28,13 @@ struct vid_dec_msg {
 };
 
 struct vid_dec_dev {
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	struct cdev cdev[NUM_OF_DRIVER_NODES];
+	struct device *device[NUM_OF_DRIVER_NODES];
+#else
 	struct cdev cdev;
 	struct device *device;
+#endif
 	resource_size_t phys_base;
 	void __iomem *virt_base;
 	unsigned int irq;

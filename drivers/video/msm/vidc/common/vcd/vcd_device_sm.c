@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,7 +11,7 @@
  *
  */
 
-#include "vidc_type.h"
+#include <media/msm/vidc_type.h>
 #include "vcd.h"
 
 static const struct vcd_dev_state_table *vcd_dev_state_table[];
@@ -48,11 +48,9 @@ void vcd_do_device_state_transition(struct vcd_drv_ctxt *drv_ctxt,
 		if (state_ctxt->state == to_state) {
 			VCD_MSG_HIGH("Device already in requested to_state=%d",
 					to_state);
-
-			return;
-		}
+		    return;
+        }
 	}
-	/* HTC_END */
 
 	VCD_MSG_MED("vcd_do_device_state_transition: D%d -> D%d, for api %d",
 			(int)state_ctxt->state, (int)to_state, ev_code);
@@ -323,11 +321,11 @@ u32 vcd_reset_device_context(struct vcd_drv_ctxt *drv_ctxt,
 	rc = vcd_power_event(&drv_ctxt->dev_ctxt, NULL,
 						 VCD_EVT_PWR_DEV_TERM_BEGIN);
 	VCD_FAILED_RETURN(rc, "VCD_EVT_PWR_DEV_TERM_BEGIN failed");
-	if (ddl_reset_hw(0))
+	if (ddl_reset_hw(0)) {
 		VCD_MSG_HIGH("HW Reset done");
-	else
+	} else {
 		VCD_MSG_FATAL("HW Reset failed");
-
+		}
 	(void)vcd_power_event(dev_ctxt, NULL, VCD_EVT_PWR_DEV_TERM_END);
 
 	return VCD_S_SUCCESS;
@@ -855,7 +853,7 @@ static u32 vcd_close_in_ready
 		rc = cctxt->clnt_state.state_table->ev_hdlr.
 			close(cctxt);
 	} else {
-		INFO("%s():Unsupported API in client state %d", __func__,
+		VCD_MSG_ERROR("Unsupported API in client state %d",
 				  cctxt->clnt_state.state);
 
 		rc = VCD_ERR_BAD_STATE;
@@ -876,7 +874,7 @@ static u32  vcd_close_in_dev_invalid(struct vcd_drv_ctxt *drv_ctxt,
 		rc = cctxt->clnt_state.state_table->
 			ev_hdlr.close(cctxt);
 	} else {
-		INFO("%s():Unsupported API in client state %d", __func__,
+		VCD_MSG_ERROR("Unsupported API in client state %d",
 					  cctxt->clnt_state.state);
 		rc = VCD_ERR_BAD_STATE;
 	}
@@ -901,7 +899,7 @@ static u32 vcd_resume_in_ready
 		rc = cctxt->clnt_state.state_table->ev_hdlr.
 			resume(cctxt);
 	} else {
-		INFO("%s():Unsupported API in client state %d", __func__,
+		VCD_MSG_ERROR("Unsupported API in client state %d",
 				  cctxt->clnt_state.state);
 
 		rc = VCD_ERR_BAD_STATE;

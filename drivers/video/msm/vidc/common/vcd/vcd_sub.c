@@ -13,7 +13,7 @@
 #include <linux/memory_alloc.h>
 #include <mach/msm_subsystem_map.h>
 #include <asm/div64.h>
-#include "vidc_type.h"
+#include <media/msm/vidc_type.h>
 #include "vcd.h"
 #include "vdec_internal.h"
 
@@ -57,6 +57,9 @@ static int vcd_pmem_alloc(size_t sz, u8 **kernel_vaddr, u8 **phy_addr,
 		pr_err("%s() map table is full", __func__);
 		goto bailout;
 	}
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	res_trk_set_mem_type(DDL_MM_MEM);
+#endif
 	memtype = res_trk_get_mem_type();
 	if (!cctxt->vcd_enable_ion) {
 		map_buffer->phy_addr = (phys_addr_t)
@@ -68,7 +71,7 @@ static int vcd_pmem_alloc(size_t sz, u8 **kernel_vaddr, u8 **phy_addr,
 	} else {
 		map_buffer->alloc_handle = ion_alloc(
 			    cctxt->vcd_ion_client, sz, SZ_4K,
-			    (1<<memtype));
+			    memtype);
 		if (!map_buffer->alloc_handle) {
 			pr_err("%s() ION alloc failed", __func__);
 			goto bailout;
@@ -186,6 +189,38 @@ u8 *vcd_pmem_get_physical(struct video_client_ctx *client_ctx,
 	}
 
 }
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+u32 vcd_get_ion_flag(struct video_client_ctx *client_ctx,
+			  unsigned long kernel_vaddr)
+{
+	unsigned long phy_addr, user_vaddr;
+	int pmem_fd;
+	struct file *file;
+	s32 buffer_index = -1;
+	u32 ion_flag = 0;
+
+	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
+					  false, &user_vaddr, &kernel_vaddr,
+					  &phy_addr, &pmem_fd, &file,
+					  &buffer_index)) {
+
+		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
+				pmem_fd, kernel_vaddr, buffer_index);
+		return ion_flag;
+	} else if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
+		false, &user_vaddr, &kernel_vaddr, &phy_addr, &pmem_fd, &file,
+		&buffer_index)) {
+		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
+				pmem_fd, kernel_vaddr, buffer_index);
+		return ion_flag;
+	} else {
+		VCD_MSG_ERROR("Couldn't get ion flag");
+		return 0;
+	}
+
+}
+#endif
 
 void vcd_reset_device_channels(struct vcd_dev_ctxt *dev_ctxt)
 {
@@ -522,6 +557,9 @@ u32 vcd_set_buffer_internal(
 {
 	struct vcd_buffer_entry *buf_entry;
 	u8 *physical;
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	u32 ion_flag = 0;
+#endif
 
 	buf_entry = vcd_find_buffer_pool_entry(buf_pool, buffer);
 	if (buf_entry) {
@@ -532,6 +570,11 @@ u32 vcd_set_buffer_internal(
 
 	physical = (u8 *) vcd_pmem_get_physical(
 		cctxt->client_data, (unsigned long)buffer);
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	ion_flag = vcd_get_ion_flag(cctxt->client_data,
+				(unsigned long)buffer);
+#endif
 
 	if (!physical) {
 		VCD_MSG_ERROR("Couldn't get physical address");
@@ -547,7 +590,6 @@ u32 vcd_set_buffer_internal(
 		VCD_MSG_ERROR("Can't allocate buffer pool is full");
 		return VCD_ERR_FAIL;
 	}
-
 	buf_entry->virtual = buffer;
 	buf_entry->physical = physical;
 	buf_entry->sz = buf_size;
@@ -556,6 +598,9 @@ u32 vcd_set_buffer_internal(
 
 	buf_entry->frame.virtual = buf_entry->virtual;
 	buf_entry->frame.physical = buf_entry->physical;
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	buf_entry->frame.ion_flag = ion_flag;
+#endif
 
 	buf_pool->validated++;
 

@@ -1,3 +1,5 @@
+source "drivers/video/msm/sii9234/Kconfig"
+
 config FB_MSM
 	tristate "MSM Framebuffer support"
 	depends on FB && ARCH_MSM
@@ -99,6 +101,16 @@ config FB_MSM_DTV
 	depends on FB_MSM_OVERLAY
 	bool
 	default n
+
+config FB_MSM_MDP_ABL
+        bool "CABL Service"
+        depends on FB_MSM
+        default n
+
+config MSM_AUTOBL_ENABLE
+        bool "ACL Service"
+        depends on FB_MSM
+        default n
 
 config FB_MSM_EXTMDDI
 	bool
@@ -301,7 +313,6 @@ config FB_MSM_WRITEBACK_MSM_PANEL
         bool "MDP overlay write back panel enable"
 	---help---
 	  Support for MDP4 OVERLAY write back mode
-
 choice
 	prompt "LCD Panel"
 	default FB_MSM_MDDI_AUTO_DETECT
@@ -608,7 +619,7 @@ config FB_MSM_HDMI_MSM_PANEL_DVI_SUPPORT
 config FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT
 	depends on FB_MSM_HDMI_MSM_PANEL
 	bool "Use HDCP mode"
-	default y
+	default n
 	---help---
 	  Support for HDCP mode for MSM HDMI 1080p Panel
 	  Choose to enable HDCP
@@ -708,5 +719,15 @@ config FB_MSM_DEFAULT_DEPTH_RGBA8888
 	bool "32 bits per pixel (RGBA8888)"
 
 endchoice
+
+config FB_MSM_SELF_REFRESH
+	bool "Use self refresh"
+	depends on FB_MSM
+	default n
+
+config FB_MSM_CABC
+	bool "Use CABC"
+	depends on FB_MSM
+	default n
 
 endif
