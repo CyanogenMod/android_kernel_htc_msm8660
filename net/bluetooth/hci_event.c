@@ -1106,25 +1106,9 @@ static void hci_cs_auth_requested(struct hci_dev *hdev, __u8 status)
 
 	conn = hci_conn_hash_lookup_handle(hdev, __le16_to_cpu(cp->handle));
 	if (conn) {
-		if (status) {
-			mgmt_auth_failed(hdev->id, &conn->dst, status);
-			clear_bit(HCI_CONN_AUTH_PEND, &conn->pend);
-
-			if (conn->state == BT_CONFIG) {
-				conn->state = BT_CONNECTED;
-				hci_proto_connect_cfm(conn, status);
-				hci_conn_put(conn);
-			} else {
-				hci_auth_cfm(conn, status);
-				hci_conn_hold(conn);
-				conn->disc_timeout = HCI_DISCONN_TIMEOUT;
-				hci_conn_put(conn);
-			}
-
-			if (test_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
-				clear_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend);
-				hci_encrypt_cfm(conn, status, 0x00);
-			}
+		if (status && conn->state == BT_CONFIG) {
+			hci_proto_connect_cfm(conn, status);
+			hci_conn_put(conn);
 		}
 		conn->auth_initiator = 1;
 	}
@@ -1764,7 +1748,7 @@ static inline void hci_disconn_complete_evt(struct hci_dev *hdev, struct sk_buff
 	if (conn->type == LE_LINK)
 		del_timer(&conn->smp_timer);
 
-	hci_proto_disconn_cfm(conn, ev->reason, 0);
+	hci_proto_disconn_cfm(conn, ev->reason);
 	hci_conn_del(conn);
 
 unlock:
@@ -1827,32 +1811,11 @@ static inline void hci_auth_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 
 		if (test_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
 			if (!ev->status) {
-				if (conn->link_mode & HCI_LM_ENCRYPT) {
-					/* Encryption implies authentication */
-					conn->link_mode |= HCI_LM_AUTH;
-					conn->link_mode |= HCI_LM_ENCRYPT;
-					conn->sec_level = conn->pending_sec_level;
-
-					clear_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend);
-
-					if (conn->state == BT_CONFIG) {
-						conn->state = BT_CONNECTED;
-
-						hci_proto_connect_cfm(conn, ev->status);
-						hci_conn_put(conn);
-					} else
-						hci_encrypt_cfm(conn, ev->status, 1);
-
-					if (test_bit(HCI_MGMT, &hdev->flags))
-						mgmt_encrypt_change(hdev->id, &conn->dst, ev->status);
-
-				} else {
-					struct hci_cp_set_conn_encrypt cp;
-					cp.handle  = ev->handle;
-					cp.encrypt = 0x01;
-					hci_send_cmd(hdev, HCI_OP_SET_CONN_ENCRYPT,
-								sizeof(cp), &cp);
-				}
+				struct hci_cp_set_conn_encrypt cp;
+				cp.handle  = ev->handle;
+				cp.encrypt = 0x01;
+				hci_send_cmd(hdev, HCI_OP_SET_CONN_ENCRYPT,
+							sizeof(cp), &cp);
 			} else {
 				clear_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend);
 				hci_encrypt_cfm(conn, ev->status, 0x00);
@@ -2643,7 +2606,6 @@ static inline void hci_link_key_notify_evt(struct hci_dev *hdev, struct sk_buff 
 		conn->key_type = ev->key_type;
 		hci_disconnect_amp(conn, 0x06);
 
-		conn->link_mode &= ~HCI_LM_ENCRYPT;
 		pin_len = conn->pin_length;
 		hci_conn_put(conn);
 		hci_conn_enter_active_mode(conn, 0);
@@ -2786,23 +2748,11 @@ static inline void hci_remote_ext_features_evt(struct hci_dev *hdev, struct sk_b
 			ie->data.ssp_mode = (ev->features[0] & 0x01);
 
 		conn->ssp_mode = (ev->features[0] & 0x01);
-
-		/* In case if remote device ssp is not supported/2.0 device
-		reduce the security level to MEDIUM if it is HIGH. An if remote
-		device supports ssp then raise the security level to HIGH if it
-		is MEDIUM */
-		if (conn->ssp_mode) {
-			if (conn->auth_initiator &&
-				(conn->io_capability != 0x03) &&
-				(conn->auth_type & HCI_AT_DEDICATED_BONDING) &&
-				(conn->pending_sec_level == BT_SECURITY_MEDIUM)) {
-				conn->pending_sec_level = BT_SECURITY_HIGH;
-				conn->auth_type = HCI_AT_DEDICATED_BONDING_MITM;
-			}
-		} else {
-			if (conn->pending_sec_level == BT_SECURITY_HIGH)
-				conn->pending_sec_level = BT_SECURITY_MEDIUM;
-		}
+		/*In case if remote device ssp supported/2.0 device
+		reduce the security level to MEDIUM if it is HIGH*/
+		if (!conn->ssp_mode &&
+			(conn->pending_sec_level == BT_SECURITY_HIGH))
+			conn->pending_sec_level = BT_SECURITY_MEDIUM;
 	}
 
 	if (conn->state != BT_CONFIG)
@@ -3359,7 +3309,7 @@ static inline void hci_disconn_phy_link_complete_evt(struct hci_dev *hdev,
 	if (conn) {
 		conn->state = BT_CLOSED;
 
-		hci_proto_disconn_cfm(conn, ev->reason, 0);
+		hci_proto_disconn_cfm(conn, ev->reason);
 		hci_conn_del(conn);
 	}
 

@@ -571,7 +571,7 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 struct hci_conn *hci_le_conn_add(struct hci_dev *hdev, bdaddr_t *dst,
 							__u8 addr_type);
 int hci_conn_del(struct hci_conn *conn);
-void hci_conn_hash_flush(struct hci_dev *hdev, u8 is_process);
+void hci_conn_hash_flush(struct hci_dev *hdev);
 void hci_conn_check_pending(struct hci_dev *hdev);
 
 struct hci_chan *hci_chan_add(struct hci_dev *hdev);
@@ -752,8 +752,7 @@ struct hci_proto {
 	int (*connect_ind)	(struct hci_dev *hdev, bdaddr_t *bdaddr, __u8 type);
 	int (*connect_cfm)	(struct hci_conn *conn, __u8 status);
 	int (*disconn_ind)	(struct hci_conn *conn);
-	int (*disconn_cfm)	(struct hci_conn *conn, __u8 reason,
-							__u8 is_process);
+	int (*disconn_cfm)	(struct hci_conn *conn, __u8 reason);
 	int (*recv_acldata)	(struct hci_conn *conn, struct sk_buff *skb, __u16 flags);
 	int (*recv_scodata)	(struct hci_conn *conn, struct sk_buff *skb);
 	int (*security_cfm)	(struct hci_conn *conn, __u8 status, __u8 encrypt);
@@ -810,18 +809,17 @@ static inline int hci_proto_disconn_ind(struct hci_conn *conn)
 	return reason;
 }
 
-static inline void hci_proto_disconn_cfm(struct hci_conn *conn, __u8 reason,
-							__u8 is_process)
+static inline void hci_proto_disconn_cfm(struct hci_conn *conn, __u8 reason)
 {
 	register struct hci_proto *hp;
 
 	hp = hci_proto[HCI_PROTO_L2CAP];
 	if (hp && hp->disconn_cfm)
-		hp->disconn_cfm(conn, reason, is_process);
+		hp->disconn_cfm(conn, reason);
 
 	hp = hci_proto[HCI_PROTO_SCO];
 	if (hp && hp->disconn_cfm)
-		hp->disconn_cfm(conn, reason, is_process);
+		hp->disconn_cfm(conn, reason);
 
 	if (conn->disconn_cfm_cb)
 		conn->disconn_cfm_cb(conn, reason);
@@ -934,7 +932,7 @@ static inline void hci_encrypt_cfm(struct hci_conn *conn, __u8 status, __u8 encr
 	if (conn->sec_level == BT_SECURITY_SDP)
 		conn->sec_level = BT_SECURITY_LOW;
 
-	if (!status && encrypt && conn->pending_sec_level > conn->sec_level)
+	if (conn->pending_sec_level > conn->sec_level)
 		conn->sec_level = conn->pending_sec_level;
 
 	hci_proto_encrypt_cfm(conn, status, encrypt);
