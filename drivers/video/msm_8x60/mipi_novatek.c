@@ -2168,8 +2168,16 @@ end:
 static void mipi_novatek_set_backlight(struct msm_fb_data_type *mfd)
 {
 	int bl_level;
-
+	static int init_3d_backlight = 0;
 	bl_level = mfd->bl_level;
+
+	if (atomic_read(&g_3D_mode) != 0) {
+		if (init_3d_backlight == 1)
+			return;
+		else
+			init_3d_backlight = 1;
+	} else
+		init_3d_backlight = 0;
 
 	mipi_dsi_set_backlight(mfd);
 }

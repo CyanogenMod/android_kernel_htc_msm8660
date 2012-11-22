@@ -1910,7 +1910,6 @@ int mdp4_overlay_blt(struct fb_info *info, struct msmfb_overlay_blt *req)
 		mdp4_lcdc_overlay_blt(mfd, req);
 
 	mutex_unlock(&mfd->dma->ov_mutex);
-	PR_DISP_INFO("%s: done\n",__func__);
 
 	return 0;
 }
@@ -1989,7 +1988,7 @@ static uint32 mdp4_overlay_get_perf_level(uint32 width, uint32 height,
 		size_720p = OVERLAY_720P_TILE_SIZE;
 	if (width*height <= OVERLAY_VGA_SIZE)
 		return OVERLAY_PERF_LEVEL3;
-	else if (width*height <= size_720p)
+	else if (virtualfb3d.is_3d == 0 && width*height <= size_720p)
 		return OVERLAY_PERF_LEVEL2;
 	else
 		return OVERLAY_PERF_LEVEL1;
@@ -2082,7 +2081,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 			/* Run blt mode only when camera is not lanuch or dtv is connected */
 #ifdef	CONFIG_FB_MSM_DTV
 			/* FIXME: Remove source camera check temporarily. It needs support from framework. */
-			} else if (mfd->blt_mode && atomic_read(&mdp_dtv_on)) {
+			} else if (mfd->blt_mode && (atomic_read(&mdp_dtv_on) || virtualfb3d.is_3d == 1)) {
 #else
 			} else if (mfd->blt_mode && !atomic_read(&ovsource)) {
 #endif
@@ -2125,7 +2124,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 						- perf_level);
 	}
 #endif
-	PR_DISP_INFO("%s: done\n",__func__);
+
 	return 0;
 }
 
@@ -2144,6 +2143,7 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 	struct mdp4_overlay_pipe *pipe;
 	uint32 i, ref_cnt = 0;
 	uint32 flags;
+	long timeout;
 
 	if (mfd == NULL)
 		return -ENODEV;
@@ -2164,7 +2164,9 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 
 	if (atomic_read(&ov_play)) {
 		mutex_unlock(&mfd->dma->ov_mutex);
-		wait_for_completion(&ov_comp);
+		timeout = wait_for_completion_timeout(&ov_comp, HZ/2);
+		if (!timeout)
+			PR_DISP_INFO("%s(%d) ov play wait timeout\n", __func__, __LINE__);
 		PR_DISP_INFO("%s(%d)wait ov play success ndx %d mixer %d\n", __func__, __LINE__, pipe->pipe_ndx, pipe->mixer_num);
 		if (mutex_lock_interruptible(&mfd->dma->ov_mutex))
 			return -EINTR;
@@ -2417,15 +2419,16 @@ int mdp4_overlay_play(struct fb_info *info, struct msmfb_overlay_data *req,
 		return -ENODEV;
 	}
 
-	if (pipe->pipe_type == OVERLAY_TYPE_VIDEO && atomic_read(&ov_unset))
+	if (pipe->pipe_type == OVERLAY_TYPE_VIDEO && atomic_read(&ov_unset)) {
+		complete(&ov_comp);
 		return 0;
+	}
 
 	if (mfd->esd_fixup)
 		mfd->esd_fixup((uint32_t)mfd);
 
 	if (mutex_lock_interruptible(&mfd->dma->ov_mutex))
 		return -EINTR;
-
 	pd = &ctrl->ov_pipe[pipe->pipe_num];
 	if (pd->player && pipe != pd->player) {
 		if (pipe->pipe_type == OVERLAY_TYPE_RGB) {

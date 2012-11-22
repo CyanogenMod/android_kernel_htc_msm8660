@@ -1502,9 +1502,7 @@ static int kgsl_setup_ion(struct kgsl_mem_entry *entry,
 	unsigned long flags;
 
 	if (kgsl_ion_client == NULL) {
-		kgsl_ion_client = msm_ion_client_create(UINT_MAX, KGSL_NAME);
-		if (kgsl_ion_client == NULL)
-			return -ENODEV;
+		return -ENODEV;
 	}
 
 	handle = ion_import_fd(kgsl_ion_client, fd);
@@ -1636,9 +1634,21 @@ static long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 	return result;
 
  error_put_file_ptr:
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	switch (entry->memtype) {
+	case KGSL_MEM_ENTRY_PMEM:
+	case KGSL_MEM_ENTRY_ASHMEM:
+		if (entry->priv_data)
+			fput(entry->priv_data);
+		break;
+	case KGSL_MEM_ENTRY_ION:
+		ion_free(kgsl_ion_client, entry->priv_data);
+		break;
+	}
+#else
 	if (entry->priv_data)
 		fput(entry->priv_data);
-
+#endif
 error:
 	kfree(entry);
 	kgsl_check_idle(dev_priv->device);
@@ -2306,12 +2316,29 @@ int kgsl_device_platform_probe(struct kgsl_device *device,
 
 	result = kgsl_drm_init(pdev);
 	if (result)
-		goto error_iounmap;
+		goto error_request_irq;
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	kgsl_ion_client = msm_ion_client_create(UINT_MAX, KGSL_NAME);
+	if (IS_ERR_OR_NULL(kgsl_ion_client)) {
+		KGSL_DRV_ERR(device, "create ion client '%s' failed: %ld\n",
+				KGSL_NAME, PTR_ERR(kgsl_ion_client));
+		kgsl_ion_client = NULL;
+		goto error_drm;
+	}
+#endif
 
 	status = kgsl_register_device(device);
 	if (!status)
 		return status;
 
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	ion_client_destroy(kgsl_ion_client);
+	kgsl_ion_client = NULL;
+error_drm:
+#endif
+	kgsl_drm_exit();
+error_request_irq:
 	free_irq(device->pwrctrl.interrupt_num, NULL);
 	device->pwrctrl.have_irq = 0;
 error_iounmap:
@@ -2331,6 +2358,11 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 	struct kgsl_memregion *regspace = &device->regspace;
 
 	kgsl_unregister_device(device);
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+	ion_client_destroy(kgsl_ion_client);
+	kgsl_ion_client = NULL;
+#endif
 
 	if (regspace->mmio_virt_base != NULL) {
 		iounmap(regspace->mmio_virt_base);

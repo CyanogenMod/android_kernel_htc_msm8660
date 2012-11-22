@@ -37,6 +37,7 @@
 #include <linux/android_alarm.h>
 #include <linux/suspend.h>
 #include <linux/earlysuspend.h>
+#include <mach/rpm.h>
 
 #define BATT_SUSPEND_CHECK_TIME			3600
 #define BATT_TIMER_CHECK_TIME			360
@@ -673,6 +674,7 @@ static long htc_batt_ioctl(struct file *filp,
 		}
 		BATT_LOG("do charger control = %u", charger_mode);
 		htc_battery_set_charging(charger_mode);
+		htc_battery_core_update_changed();
 		break;
 	}
 	case HTC_BATT_IOCTL_UPDATE_BATT_INFO: {

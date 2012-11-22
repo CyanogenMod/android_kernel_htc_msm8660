@@ -34,7 +34,7 @@ struct msm_serial_hs_platform_data {
 	unsigned char bt_wakeup_pin;	/* Device to Chip */
 	unsigned char host_wakeup_pin;	/* Chip to Device */
 };
-#ifdef CONFIG_MACH_RUBY
+#if 1		//Add by evan.xu@2012-02-02
 /* API for TI_ST */
 extern void ti_msm_hs_request_clock_off(struct uart_port *uport);
 extern void ti_msm_hs_request_clock_on(struct uart_port *uport);

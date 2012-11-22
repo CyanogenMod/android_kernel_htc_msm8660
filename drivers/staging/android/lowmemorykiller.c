@@ -56,6 +56,24 @@ static size_t lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 
+/*
+ * if we are in boost_duration (before fork_boost timeout happens)
+ *   adj_array = fork_boost_adj
+ *   min_array = lowmem_minfree[] + lowmem_fork_boost_minfree[]
+ * else
+ *   adj_array = lowmem_adj;
+ *   min_array = lowmem_minfree;
+ * endif
+ */
+static size_t lowmem_fork_boost_minfree[6] = {
+	0,
+	0,
+	0,
+	0,
+	6 * 1024,	/* 24MB */
+	6 * 1024,	/* 24MB */
+};
+static int lowmem_fork_boost_minfree_size = 6;
 static size_t fork_boost_adj[6] = {
 	0,
 	2,
@@ -64,6 +82,7 @@ static size_t fork_boost_adj[6] = {
 	9,
 	12
 };
+static int fork_boost_adj_size = 6;
 
 static unsigned int offlining;
 
@@ -81,16 +100,10 @@ static struct task_struct *lowmem_deathpending;
 static unsigned long lowmem_deathpending_timeout;
 static uint32_t lowmem_check_filepages = 0;
 static unsigned long lowmem_fork_boost_timeout;
-/*
- * discount = 1 -> 1/2^1 = 50% Off
- * discount = 2 -> 1/2^2 = 25% Off
- * discount = 3 -> 1/2^3 = 12.5% Off
- * discount = 4 -> 1/2^4 = 6.25% Off
- */
-static unsigned int discount = 2;
 static unsigned long boost_duration = (HZ << 1);
 
 static uint32_t lowmem_fork_boost = 1;
+static int last_min_selected_adj = OOM_ADJUST_MAX + 1;
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -99,6 +112,39 @@ static uint32_t lowmem_fork_boost = 1;
 			printk(x);			\
 		}					\
 	} while (0)
+
+/**
+ * dump_tasks - dump current memory state of all system tasks
+ *
+ * State information includes task's pid, uid, tgid, vm size, rss, cpu, oom_adj
+ * value, oom_score_adj value, and name.
+ *
+ * Call with tasklist_lock read-locked.
+ */
+static void dump_tasks(void)
+{
+	struct task_struct *p;
+	struct task_struct *task;
+
+	pr_info("[ pid ]   uid  total_vm      rss cpu oom_adj  name\n");
+	for_each_process(p) {
+		task = find_lock_task_mm(p);
+		if (!task) {
+			/*
+			 * This is a kthread or all of p's threads have already
+			 * detached their mm's.  There's no need to report
+			 * them; they can't be oom killed anyway.
+			 */
+			continue;
+		}
+
+		pr_info("[%5d] %5d  %8lu %8lu %3u     %3d  %s\n",
+			task->pid, task_uid(task),
+			task->mm->total_vm, get_mm_rss(task->mm),
+			task_cpu(task), task->signal->oom_adj, task->comm);
+		task_unlock(task);
+	}
+}
 
 static int
 task_free_notify_func(struct notifier_block *self, unsigned long val, void *data);
@@ -215,7 +261,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int lru_file = global_page_state(NR_ACTIVE_FILE) +
 			global_page_state(NR_INACTIVE_FILE);
 	struct zone *zone;
-	int fork_boost;
+	int fork_boost = 0;
+	size_t minfree_boosted[6] = {0, 0, 0, 0, 0, 0};
+	size_t *min_array;
 	int *adj_array;
 
 	if (offlining) {
@@ -245,30 +293,28 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	if (lowmem_fork_boost &&
 	    time_before_eq(jiffies, lowmem_fork_boost_timeout)) {
-		fork_boost = lowmem_minfree[lowmem_minfree_size - 1] >> discount;
-		if (unlikely(other_file < fork_boost))
-			other_file = 0;
-		else
-			other_file -= fork_boost;
-
+		for (i = 0; i < lowmem_minfree_size; i++)
+			minfree_boosted[i] = lowmem_minfree[i] + lowmem_fork_boost_minfree[i] ;
+		/* Switch to fork_boost adj/minfree within boost_duration */
 		adj_array = fork_boost_adj;
-		lowmem_print(3, "lowmem_shrink other_file: %d, fork_boost: %d\n",
-			     other_file, fork_boost);
-	}
-	else
+		min_array = minfree_boosted;
+	} else {
 		adj_array = lowmem_adj;
+		min_array = lowmem_minfree;
+	}
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
-		if (other_free < lowmem_minfree[i]) {
-			if (other_file < lowmem_minfree[i] ||
+		if (other_free < min_array[i]) {
+			if (other_file < min_array[i] ||
 				(lowmem_check_filepages &&
-				(lru_file < lowmem_minfile[i]))) {
+				(lru_file < min_array[i]))) {
 
 				min_adj = adj_array[i];
+				fork_boost = lowmem_fork_boost_minfree[i];
 				break;
 			}
 		}
@@ -327,6 +373,29 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_adj, selected_tasksize);
+
+		if (lowmem_fork_boost)
+			lowmem_print(1, "current=[%s], min_adj=%d,"
+				" reclaim=%dK, free=%dK,"
+				" file=%dK, fork_boost=%dK\n",
+				current->comm, min_adj,
+				selected_tasksize << 2, other_free << 2,
+				other_file << 2, fork_boost << 2);
+
+		/* Show memory info if we reach certain adjs */
+		if (selected_oom_adj < last_min_selected_adj &&
+			(selected_oom_adj == 12 || selected_oom_adj == 9 ||
+			 selected_oom_adj == 7)) {
+			last_min_selected_adj = selected_oom_adj;
+			show_mem(SHOW_MEM_FILTER_NODES);
+			dump_tasks();
+		}
+		/* Dump tasks if we hit low-memory condition */
+		if (selected_oom_adj < 7) {
+			show_mem(SHOW_MEM_FILTER_NODES);
+			dump_tasks();
+		}
+
 		lowmem_deathpending = selected;
 		lowmem_deathpending_timeout = jiffies + HZ;
 		force_sig(SIGKILL, selected);
@@ -367,8 +436,12 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
-module_param_named(fork_boost, lowmem_fork_boost, uint, S_IRUGO | S_IWUSR);
-
+module_param_named(fork_boost_enabled, lowmem_fork_boost, uint,
+			 S_IRUGO | S_IWUSR);
+module_param_array_named(fork_boost_adj, fork_boost_adj, int,
+			 &fork_boost_adj_size, S_IRUGO | S_IWUSR);
+module_param_array_named(fork_boost_minfree, lowmem_fork_boost_minfree, uint,
+			 &lowmem_fork_boost_minfree_size, S_IRUGO | S_IWUSR);
 module_param_named(check_filepages , lowmem_check_filepages, uint,
 		   S_IRUGO | S_IWUSR);
 module_param_array_named(minfile, lowmem_minfile, uint, &lowmem_minfile_size,

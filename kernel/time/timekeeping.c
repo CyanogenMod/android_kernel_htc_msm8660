@@ -613,7 +613,6 @@ static void __timekeeping_inject_sleeptime(struct timespec *delta)
 					"sleep delta value!\n");
 		return;
 	}
-
 	xtime = timespec_add(xtime, *delta);
 	wall_to_monotonic = timespec_sub(wall_to_monotonic, *delta);
 	total_sleep_time = timespec_add(total_sleep_time, *delta);

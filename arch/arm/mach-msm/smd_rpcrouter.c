@@ -71,55 +71,55 @@ static int smd_rpcrouter_debug_mask;
 module_param_named(debug_mask, smd_rpcrouter_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
-#define DIAG(x...) printk(KERN_ERR "[RR] ERROR " x)
+#define DIAG(x...) printk(KERN_ERR "[K][RR] ERROR " x)
 
 #if defined(CONFIG_MSM_ONCRPCROUTER_DEBUG)
 #define D(x...) do { \
 if (smd_rpcrouter_debug_mask & RTR_DBG) \
-	printk(KERN_ERR x); \
+	printk(KERN_ERR "[K]"x); \
 } while (0)
 
 #define RR(x...) do { \
 if (smd_rpcrouter_debug_mask & R2R_MSG) \
-	printk(KERN_ERR "[RR] "x); \
+	printk(KERN_ERR "[K][RR] "x); \
 } while (0)
 
 #define RAW(x...) do { \
 if (smd_rpcrouter_debug_mask & R2R_RAW) \
-	printk(KERN_ERR "[RAW] "x); \
+	printk(KERN_ERR "[K][RAW] "x); \
 } while (0)
 
 #define RAW_HDR(x...) do { \
 if (smd_rpcrouter_debug_mask & R2R_RAW_HDR) \
-	printk(KERN_ERR "[HDR] "x); \
+	printk(KERN_ERR "[K][HDR] "x); \
 } while (0)
 
 #define RAW_PMR(x...) do { \
 if (smd_rpcrouter_debug_mask & RAW_PMR) \
-	printk(KERN_ERR "[PMR] "x); \
+	printk(KERN_ERR "[K][PMR] "x); \
 } while (0)
 
 #define RAW_PMR_NOMASK(x...) do { \
-	printk(KERN_ERR "[PMR] "x); \
+	printk(KERN_ERR "[K][PMR] "x); \
 } while (0)
 
 #define RAW_PMW(x...) do { \
 if (smd_rpcrouter_debug_mask & RAW_PMW) \
-	printk(KERN_ERR "[PMW] "x); \
+	printk(KERN_ERR "[K][PMW] "x); \
 } while (0)
 
 #define RAW_PMW_NOMASK(x...) do { \
-	printk(KERN_ERR "[PMW] "x); \
+	printk(KERN_ERR "[K][PMW] "x); \
 } while (0)
 
 #define IO(x...) do { \
 if (smd_rpcrouter_debug_mask & RPC_MSG) \
-	printk(KERN_ERR "[RPC] "x); \
+	printk(KERN_ERR "[K][RPC] "x); \
 } while (0)
 
 #define NTFY(x...) do { \
 if (smd_rpcrouter_debug_mask & NTFY_MSG) \
-	printk(KERN_ERR "[NOTIFY] "x); \
+	printk(KERN_ERR "[K][NOTIFY] "x); \
 } while (0)
 #else
 #define D(x...) do { } while (0)
@@ -247,7 +247,7 @@ static int rpcrouter_send_control_msg(struct rpcrouter_xprt_info *xprt_info,
 
 	if (!(msg->cmd == RPCROUTER_CTRL_CMD_HELLO) &&
 	    !xprt_info->initialized) {
-		printk(KERN_ERR "rpcrouter_send_control_msg(): Warning, "
+		printk(KERN_ERR "[K] rpcrouter_send_control_msg(): Warning, "
 		       "router not initialized\n");
 		return -EINVAL;
 	}
@@ -523,7 +523,7 @@ static void rpcrouter_register_board_dev(struct rr_server *server)
 			list_del(&board_info->list);
 			rc = platform_device_register(&board_info->dev->pdev);
 			if (rc)
-				pr_err("%s: board dev register failed %d\n",
+				pr_err("[K] %s: board dev register failed %d\n",
 				       __func__, rc);
 			kfree(board_info);
 			break;
@@ -813,7 +813,7 @@ static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 							 msg->cli.cid);
 		if (!r_ept) {
 			printk(KERN_ERR
-			       "rpcrouter: Unable to resume client\n");
+			       "[K] rpcrouter: Unable to resume client\n");
 			break;
 		}
 		spin_lock_irqsave(&r_ept->quota_lock, flags);
@@ -826,7 +826,7 @@ static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 #if 0
 		if (msg->srv.vers == 0) {
 			pr_err(
-			"rpcrouter: Server create rejected, version = 0, "
+			"[K] rpcrouter: Server create rejected, version = 0, "
 			"program = %08x\n", msg->srv.prog);
 			break;
 		}
@@ -853,7 +853,7 @@ static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 					msg->srv.pid, msg->srv.cid);
 				if (rc < 0)
 					printk(KERN_ERR
-						"rpcrouter:Client create"
+						"[K] rpcrouter:Client create"
 						"error (%d)\n", rc);
 			}
 			rpcrouter_register_board_dev(server);
@@ -886,7 +886,7 @@ static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 		RR("o REMOVE_CLIENT id=%d:%08x\n", msg->cli.pid, msg->cli.cid);
 		if (msg->cli.pid == RPCROUTER_PID_LOCAL) {
 			printk(KERN_ERR
-			       "rpcrouter: Denying remote removal of "
+			       "[K] rpcrouter: Denying remote removal of "
 			       "local client\n");
 			break;
 		}
@@ -900,7 +900,7 @@ static int process_control_msg(struct rpcrouter_xprt_info *xprt_info,
 		}
 
 		/* Notify local clients of this event */
-		printk(KERN_ERR "rpcrouter: LOCAL NOTIFICATION NOT IMP\n");
+		printk(KERN_ERR "[K] rpcrouter: LOCAL NOTIFICATION NOT IMP\n");
 		rc = -ENOSYS;
 
 		break;
@@ -952,7 +952,7 @@ static void *rr_malloc(unsigned sz)
 	if (ptr)
 		return ptr;
 
-	printk(KERN_ERR "rpcrouter: kmalloc of %d failed, retrying...\n", sz);
+	printk(KERN_ERR "[K] rpcrouter: kmalloc of %d failed, retrying...\n", sz);
 	do {
 		ptr = kmalloc(sz, GFP_KERNEL);
 	} while (!ptr);
@@ -1499,7 +1499,7 @@ static struct msm_rpc_reply *get_avail_reply(struct msm_rpc_endpoint *ept)
 	if (list_empty(&ept->reply_avail_q)) {
 		if (ept->reply_cnt >= RPCROUTER_PEND_REPLIES_MAX) {
 			printk(KERN_ERR
-			       "exceeding max replies of %d \n",
+			       "[K] exceeding max replies of %d \n",
 			       RPCROUTER_PEND_REPLIES_MAX);
 			return 0;
 		}
@@ -1551,7 +1551,7 @@ int msm_rpc_write(struct msm_rpc_endpoint *ept, void *buffer, int count)
 
 	/* has to have at least the xid and type fields */
 	if (count < (sizeof(uint32_t) * 2)) {
-		printk(KERN_ERR "rr_write: rejecting runt packet\n");
+		printk(KERN_ERR "[K] rr_write: rejecting runt packet\n");
 		return -EINVAL;
 	}
 
@@ -1559,18 +1559,18 @@ int msm_rpc_write(struct msm_rpc_endpoint *ept, void *buffer, int count)
 		/* RPC CALL */
 		if (count < (sizeof(uint32_t) * 6)) {
 			printk(KERN_ERR
-			       "rr_write: rejecting runt call packet\n");
+			       "[K] rr_write: rejecting runt call packet\n");
 			return -EINVAL;
 		}
 		if (ept->dst_pid == 0xffffffff) {
-			printk(KERN_ERR "rr_write: not connected\n");
+			printk(KERN_ERR "[K] rr_write: not connected\n");
 			return -ENOTCONN;
 		}
 		if ((ept->dst_prog != rq->prog) ||
 		    ((be32_to_cpu(ept->dst_vers) & 0x0fff0000) !=
 		     (be32_to_cpu(rq->vers) & 0x0fff0000))) {
 			printk(KERN_ERR
-			       "rr_write: cannot write to %08x:%08x "
+			       "[K] rr_write: cannot write to %08x:%08x "
 			       "(bound to %08x:%08x)\n",
 			       be32_to_cpu(rq->prog), be32_to_cpu(rq->vers),
 			       be32_to_cpu(ept->dst_prog),
@@ -1587,7 +1587,7 @@ int msm_rpc_write(struct msm_rpc_endpoint *ept, void *buffer, int count)
 		reply = get_pend_reply(ept, rq->xid);
 		if (!reply) {
 			printk(KERN_ERR
-			       "rr_write: rejecting, reply not found \n");
+			       "[K] rr_write: rejecting, reply not found \n");
 			return -EINVAL;
 		}
 		hdr.dst_pid = reply->pid;
@@ -1600,7 +1600,7 @@ int msm_rpc_write(struct msm_rpc_endpoint *ept, void *buffer, int count)
 
 	if ((!r_ept) && (hdr.dst_pid != RPCROUTER_PID_LOCAL)) {
 		printk(KERN_ERR
-			"msm_rpc_write(): No route to ept "
+			"[K] msm_rpc_write(): No route to ept "
 			"[PID %x CID %x]\n", hdr.dst_pid, hdr.dst_cid);
 		count = -EHOSTUNREACH;
 		goto write_release_lock;
@@ -1981,7 +1981,7 @@ static struct msm_rpc_endpoint *__msm_rpc_connect(uint32_t prog, uint32_t vers,
 			break;
 
 		if (found_prog) {
-			pr_info("%s: server not found %x:%x\n",
+			pr_info("[K] %s: server not found %x:%x\n",
 				__func__, prog, vers);
 			rc = -EHOSTUNREACH;
 			break;

@@ -1216,8 +1216,16 @@ int msm_camio_csi_config_withReceiverDisabled(struct msm_camera_csi_params *csi_
 	CDBG("[CAM] %s MIPI_PHY_D0_CONTROL2 val=0x%x\n", __func__, val);
 	msm_io_w(val, csibase + MIPI_PHY_D0_CONTROL2);
 	msm_io_w(val, csibase + MIPI_PHY_D1_CONTROL2);
-	msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
-	msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+/*HTC_START Horng 20110802*/
+/*Disable MIPI lane2,lane3 if not in use*/
+	if (csi_params->lane_cnt > 2) {
+		msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
+		msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+	} else {
+		msm_io_w(0x00000000, csibase + MIPI_PHY_D2_CONTROL2);
+		msm_io_w(0x00000000, csibase + MIPI_PHY_D3_CONTROL2);
+	}
+/*HTC_END*/
 
 
 	val = (0x0F << MIPI_PHY_CL_CONTROL_HS_TERM_IMP_SHFT) |
@@ -1531,7 +1539,7 @@ void msm_camio_csi_core_on(void)
 
 }
 
-int msm_camio_csi_disable_lp_rec(void)
+int msm_camio_csi_disable_lp_rec(int lane_cnt)
 {
     int rc = 0;
     uint32_t val = 0;
@@ -1544,8 +1552,17 @@ int msm_camio_csi_disable_lp_rec(void)
     CDBG("[CAM] %s MIPI_PHY_D0_CONTROL2 val=0x%x\n", __func__, val);
     msm_io_w(val, csibase + MIPI_PHY_D0_CONTROL2);
     msm_io_w(val, csibase + MIPI_PHY_D1_CONTROL2);
-    msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
-    msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+
+    /*HTC_START Horng 20110802*/
+    /*Disable MIPI lane2,lane3 if not in use*/
+    if (lane_cnt > 2) {
+        msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
+        msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+    } else {
+        msm_io_w(0x00000000, csibase + MIPI_PHY_D2_CONTROL2);
+        msm_io_w(0x00000000, csibase + MIPI_PHY_D3_CONTROL2);
+    }
+    /*HTC_END*/
 
     val = (0x0F << MIPI_PHY_CL_CONTROL_HS_TERM_IMP_SHFT) |
 		(0x1 << MIPI_PHY_CL_CONTROL_LP_REC_EN_SHFT);
@@ -1555,7 +1572,7 @@ int msm_camio_csi_disable_lp_rec(void)
 }
 
 
-int msm_camio_csi_enable_lp_rec(void)
+int msm_camio_csi_enable_lp_rec(int lane_cnt)
 {
     int rc = 0;
     uint32_t val = 0;
@@ -1568,8 +1585,17 @@ int msm_camio_csi_enable_lp_rec(void)
     CDBG("[CAM] %s MIPI_PHY_D0_CONTROL2 val=0x%x\n", __func__, val);
     msm_io_w(val, csibase + MIPI_PHY_D0_CONTROL2);
     msm_io_w(val, csibase + MIPI_PHY_D1_CONTROL2);
-    msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
-    msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+
+    /*HTC_START Horng 20110802*/
+    /*Disable MIPI lane2,lane3 if not in use*/
+    if (lane_cnt > 2) {
+        msm_io_w(val, csibase + MIPI_PHY_D2_CONTROL2);
+        msm_io_w(val, csibase + MIPI_PHY_D3_CONTROL2);
+    } else {
+        msm_io_w(0x00000000, csibase + MIPI_PHY_D2_CONTROL2);
+        msm_io_w(0x00000000, csibase + MIPI_PHY_D3_CONTROL2);
+    }
+    /*HTC_END*/
 
     val = (0x0F << MIPI_PHY_CL_CONTROL_HS_TERM_IMP_SHFT) |
 		(0x1 << MIPI_PHY_CL_CONTROL_LP_REC_EN_SHFT);

@@ -47,6 +47,12 @@ config TPS65200
 
 	  PANASONIC GYR Driver implemented by HTC.
 
+config SENSORS_BMA150
+	tristate "BMA150 G-sensor Driver"
+	depends on I2C
+	help
+	 BMA150 G-sensor Driver implemented by HTC.
+
 config SENSORS_BMA250
 	tristate "BMA250 acceleration sensor support"
 	depends on I2C=y

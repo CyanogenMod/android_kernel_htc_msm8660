@@ -238,7 +238,7 @@ static int __die(const char *str, int err, struct thread_info *thread, struct pt
 	static int die_counter;
 	int ret;
 
-	printk(KERN_EMERG "Internal error: %s: %x [#%d]" S_PREEMPT S_SMP "\n",
+	printk(KERN_EMERG "[K] Internal error: %s: %x [#%d]" S_PREEMPT S_SMP "\n",
 	       str, err, ++die_counter);
 
 	/* trap and error numbers are mostly meaningless on ARM */

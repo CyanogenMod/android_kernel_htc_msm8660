@@ -394,6 +394,9 @@
 
 /* report 2 kind of finger data */
 #define REPORT_BOTH_DATA			1
+/* report type */
+#define SYN_AND_REPORT_TYPE_A           	0
+#define SYN_AND_REPORT_TYPE_B           	1
 
 struct info_id_t {
 	uint8_t family_id;
@@ -427,6 +430,18 @@ struct atmel_finger_data {
 	int z;
 };
 
+struct atmel_cfg {
+	uint8_t objid;
+	uint8_t byte;
+	uint8_t value;
+	uint8_t orival;
+};
+
+struct atmel_mferr {
+	uint8_t cnt;
+	struct atmel_cfg *cfg;
+};
+
 struct atmel_i2c_platform_data {
 	uint16_t version;
 	uint16_t source;
@@ -443,6 +458,7 @@ struct atmel_i2c_platform_data {
 	int gpio_rst;
 	int (*power)(int on);
 	uint8_t unlock_attr;
+	uint8_t report_type;
 	uint8_t report_both;
 	int8_t config_T6[6];
 	int8_t config_T7[3];
@@ -481,8 +497,14 @@ struct atmel_i2c_platform_data {
 	uint16_t filter_level[4];
 	uint8_t GCAF_level[5];
 	uint8_t mferr_config[13];
+	struct atmel_mferr mferr_cfg;
+	struct atmel_mferr cfm_calb;
+	struct atmel_mferr cable_cfg;
 	uint8_t noiseLine_config[8];
 	uint8_t workaround;
+#if defined(CONFIG_TOUCH_KEY_FILTER)
+	uint16_t flt_th;
+#endif
 };
 
 struct atmel_config_data {

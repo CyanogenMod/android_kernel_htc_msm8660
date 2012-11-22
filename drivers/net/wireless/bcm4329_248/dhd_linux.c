@@ -1224,10 +1224,12 @@ dhd_txflowcontrol(dhd_pub_t *dhdp, int ifidx, bool state)
 	dhdp->txoff = state;
 	ASSERT(dhd && dhd->iflist[ifidx]);
 	net = dhd->iflist[ifidx]->net;
-	if (state == ON)
-		netif_stop_queue(net);
-	else
-		netif_wake_queue(net);
+	if (net) {
+		if (state == ON)
+			netif_stop_queue(net);
+		else
+			netif_wake_queue(net);
+	}
 }
 
 void
@@ -3280,12 +3282,12 @@ int net_os_send_rssilow_message(struct net_device *dev)
 }
 //HTC_CSP_END
 
-void dhd_bus_country_set(struct net_device *dev, char *country_code)
+void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd && dhd->pub.up)
-		strncpy(dhd->pub.country_code, country_code, WLC_CNTRY_BUF_SZ);
+		memcpy(&dhd->pub.dhd_cspec, cspec, sizeof(wl_country_t));
 }
 
 

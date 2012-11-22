@@ -48,6 +48,22 @@ static struct gpiomux_setting i2c_suspended_config = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+#if defined(CONFIG_MACH_VILLEC2)
+/* This I2C active configuration applies to GSBI12 */
+static struct gpiomux_setting i2c_active_gsbi12 = {
+	.func = GPIOMUX_FUNC_2,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+/* This I2C suspended configuration applies to GSBI12*/
+static struct gpiomux_setting i2c_suspended_gsbi12_config = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#endif
+
 static struct gpiomux_setting ps_hold = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_12MA,
@@ -189,6 +205,20 @@ static struct gpiomux_setting aux_pcm_suspend_config = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
+
+#if defined(CONFIG_MACH_VILLEC2)
+static struct gpiomux_setting rx_i2s_active_config = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting rx_i2s_suspend_config = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
 
 static struct gpiomux_setting uart1dm_active = {
 	.func = GPIOMUX_FUNC_1,
@@ -416,6 +446,8 @@ static struct gpiomux_setting mdm2ap_vddmin_suspend_cfg = {
 };
 
 static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
+/* This pin in Rider, Shooter, and VilleC2 is not used, do not operate it. */
+#if !(defined(CONFIG_MACH_RIDER) || defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_U) || defined(CONFIG_MACH_SHOOTER_CT) || defined(CONFIG_MACH_VILLEC2))
 	{
 		.gpio      = 33,
 		.settings = {
@@ -444,6 +476,7 @@ static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE]    = &spi_active,
 		},
 	},
+#endif
 	{
 		.gpio      = 43,
 		.settings = {
@@ -451,13 +484,29 @@ static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE]    = &i2c_active,
 		},
 	},
-/* This pin in Rider and Shooter is not used, do not operate it. */
-#if !(defined(CONFIG_MACH_RIDER) || defined(CONFIG_MACH_SHOOTER))
+/* This pin in Rider, Shooter, and VilleC2 is not used, do not operate it. */
+#if !(defined(CONFIG_MACH_RIDER) || defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_U) || defined(CONFIG_MACH_SHOOTER_CT) || defined(CONFIG_MACH_VILLEC2))
 	{
 		.gpio      = 44,
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &i2c_suspended_config,
 			[GPIOMUX_ACTIVE]    = &i2c_active,
+		},
+	},
+#endif
+#if defined(CONFIG_MACH_VILLEC2)
+	{
+		.gpio      = 115,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &i2c_suspended_gsbi12_config,
+			[GPIOMUX_ACTIVE]    = &i2c_active_gsbi12,
+		},
+	},
+	{
+		.gpio      = 116,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &i2c_suspended_gsbi12_config,
+			[GPIOMUX_ACTIVE]    = &i2c_active_gsbi12,
 		},
 	},
 #endif
@@ -783,6 +832,39 @@ static struct msm_gpiomux_config msm8x60_aux_pcm_configs[] __initdata = {
 		},
 	},
 };
+
+#if defined(CONFIG_MACH_VILLEC2)
+static struct msm_gpiomux_config msm8x60_rx_i2s_configs[] __initdata = {
+	{
+		.gpio = 119,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &rx_i2s_active_config,
+			[GPIOMUX_SUSPENDED] = &rx_i2s_suspend_config,
+		},
+	},
+	{
+		.gpio = 120,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &rx_i2s_active_config,
+			[GPIOMUX_SUSPENDED] = &rx_i2s_suspend_config,
+		},
+	},
+	{
+		.gpio = 121,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &rx_i2s_active_config,
+			[GPIOMUX_SUSPENDED] = &rx_i2s_suspend_config,
+		},
+	},
+	{
+		.gpio = 122,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &rx_i2s_active_config,
+			[GPIOMUX_SUSPENDED] = &rx_i2s_suspend_config,
+		},
+	},
+};
+#endif
 
 static struct msm_gpiomux_config msm8x60_sdc_configs[] __initdata = {
 	/* SDCC1 data[0] */
@@ -1646,7 +1728,30 @@ msm8x60_rider_gpiomux_cfgs[] __initdata = {
 	{NULL, 0},
 };
 
-
+struct msm_gpiomux_configs
+msm8x60_villec2_gpiomux_cfgs[] __initdata = {
+	{msm8x60_gsbi_configs, ARRAY_SIZE(msm8x60_gsbi_configs)},
+	{msm8x60_uart_configs, ARRAY_SIZE(msm8x60_uart_configs)},
+#ifdef CONFIG_MSM_GSBI9_UART
+	{msm8x60_charm_uart_configs, ARRAY_SIZE(msm8x60_charm_uart_configs)},
+#endif
+#ifdef CONFIG_USB_PEHCI_HCD
+	{msm8x60_isp_usb_configs, ARRAY_SIZE(msm8x60_isp_usb_configs)},
+#endif
+	{msm8x60_aux_pcm_configs, ARRAY_SIZE(msm8x60_aux_pcm_configs)},
+#if defined(CONFIG_MACH_VILLEC2)
+	{msm8x60_rx_i2s_configs, ARRAY_SIZE(msm8x60_rx_i2s_configs)},
+#endif
+	{msm8x60_sdc_configs, ARRAY_SIZE(msm8x60_sdc_configs)},
+	{msm8x60_snd_configs, ARRAY_SIZE(msm8x60_snd_configs)},
+	{msm8x60_mdp_vsync_configs, ARRAY_SIZE(msm8x60_mdp_vsync_configs)},
+	{msm8x60_pmic_configs, ARRAY_SIZE(msm8x60_pmic_configs)},
+	{msm8x60_tmg200_configs, ARRAY_SIZE(msm8x60_tmg200_configs)},
+#if defined(CONFIG_MMC_MSM_SDC2_SUPPORT) && defined(CONFIG_MMC_MSM_SDC5_SUPPORT)
+	{msm8x60_charm_sdc_configs, ARRAY_SIZE(msm8x60_charm_sdc_configs)},
+#endif
+	{NULL, 0},
+};
 
 /* gpiomux data for HTC Vigor device */
 struct msm_gpiomux_configs

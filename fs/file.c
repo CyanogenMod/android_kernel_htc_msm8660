@@ -22,6 +22,10 @@
 #include <linux/rcupdate.h>
 #include <linux/workqueue.h>
 
+#ifdef CONFIG_DEBUG_FDLEAK
+#include <linux/mount.h>
+#endif
+
 struct fdtable_defer {
 	spinlock_t lock;
 	struct work_struct wq;
@@ -425,6 +429,50 @@ struct files_struct init_files = {
 	.file_lock	= __SPIN_LOCK_UNLOCKED(init_task.file_lock),
 };
 
+#ifdef CONFIG_DEBUG_FDLEAK
+static void fd_print(struct files_struct *files, unsigned int fd)
+{
+	int i;
+	struct file *file_test;
+	unsigned long flag;
+
+	spin_lock_irqsave(&files->file_lock, flag);
+	for (i = 0; i < fd; i++) {
+		file_test = fcheck_files(files, i);
+		if (!file_test)
+			continue;
+		else {
+			 printk(KERN_ERR "[FD%d][%s][%s]\n"
+				, i
+				, file_test->f_path.dentry->d_name.name
+				, file_test->f_path.mnt->mnt_mountpoint->d_name.name
+				);
+		}
+	}
+	spin_unlock_irqrestore(&files->file_lock, flag);
+	printk(KERN_ERR "[FD] %u files print end\n", fd);
+}
+
+void inline fd_num_check(struct files_struct *files, unsigned int fd)
+{
+	static unsigned int fd_check = CONFIG_DEBUG_FDLEAK_CRITERION;
+
+	if (unlikely(fd_check < fd)) {
+		fd_check += 50;
+			printk(KERN_ERR "[FD:%s] pid:%d(%s)(parent:%d/%s) now open %u files.\n"
+					 , __func__
+					 , current->pid, current->comm
+					 , current->parent->pid, current->parent->comm, fd
+					 );
+			fd_print(files, fd);
+	}
+
+}
+EXPORT_SYMBOL(fd_num_check);
+#endif
+
+
+
 /*
  * allocate a file descriptor, mark it busy.
  */
@@ -476,6 +524,9 @@ repeat:
 
 out:
 	spin_unlock(&files->file_lock);
+#ifdef CONFIG_DEBUG_FDLEAK
+	fd_num_check(files, fd);
+#endif
 	return error;
 }
 

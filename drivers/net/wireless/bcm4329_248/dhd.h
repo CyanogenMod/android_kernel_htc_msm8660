@@ -165,7 +165,7 @@ typedef struct dhd_pub {
 	char * pktfilter[100];
 	int pktfilter_count;
 
-	uint8 country_code[WLC_CNTRY_BUF_SZ];
+	wl_country_t dhd_cspec;         /* Current Locale info */
 	char eventmask[WL_EVENTING_MASK_LEN];
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_HAS_WAKELOCK)
@@ -503,7 +503,7 @@ extern uint dhd_sdiod_drive_strength;
 extern uint dhd_force_tx_queueing;
 
 #ifdef CUSTOMER_HW2
-#define KEEP_ALIVE_PERIOD 60000
+#define KEEP_ALIVE_PERIOD 55000
 #else
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
 #define KEEP_ALIVE_PERIOD 55000

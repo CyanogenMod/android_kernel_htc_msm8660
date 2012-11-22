@@ -142,7 +142,11 @@ ifeq ($(CONFIG_ARCH_MSM8960),y)
   obj-$(CONFIG_FB_MSM)            += msm/
 else
   ifeq ($(CONFIG_ARCH_MSM8X60),y)
-    obj-$(CONFIG_FB_MSM)          += msm_8x60/
+    ifeq ($(CONFIG_FB_MSM8960),y)
+	  obj-$(CONFIG_FB_MSM)          += msm/
+    else
+      obj-$(CONFIG_FB_MSM)          += msm_8x60/
+    endif
   else
     ifeq ($(CONFIG_ARCH_MSM7X27A),y)
       obj-$(CONFIG_FB_MSM)          += msm_7x27A/

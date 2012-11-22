@@ -676,7 +676,7 @@ void __init perflock_init(struct perflock_platform_data *pdata)
 	return;
 
 invalid_config:
-	pr_err("%s: invalid configuration data, %p %d %d\n", __func__,
+	pr_err("[K] %s: invalid configuration data, %p %d %d\n", __func__,
 		perf_acpu_table, table_size, PERF_LOCK_INVALID);
 }
 

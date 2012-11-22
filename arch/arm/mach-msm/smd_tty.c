@@ -161,7 +161,7 @@ static void smd_tty_read(unsigned long param)
 			** context here and nobody else could 'steal' our
 			** characters.
 			*/
-			printk(KERN_ERR "OOPS - smd_tty_buffer mismatch?!");
+			printk(KERN_ERR "[K] OOPS - smd_tty_buffer mismatch?!");
 		}
 
 		wake_lock_timeout(&info->wake_lock, HZ / 2);

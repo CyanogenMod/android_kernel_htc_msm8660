@@ -1138,6 +1138,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 		MIPI_OUTP(MIPI_DSI_BASE + 0x010c, isr);
 		PR_DISP_ERR("%s timeout, isr=0x%08x\n", __func__, isr);
 		mipi_dsi_read_status_reg();
+		mipi_dsi_sw_reset();
 		atomic_set(&need_soft_reset, 1);
 	}
 

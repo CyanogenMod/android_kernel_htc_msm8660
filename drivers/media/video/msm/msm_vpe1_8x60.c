@@ -554,11 +554,7 @@ static int vpe_update_scaler_with_dis(struct video_crop_t *pcrop,
 			pcrop->in2_w / temp_w;
 		zoom_dis_y = dis_offset->dis_offset_y *
 			pcrop->in2_h / temp_h;
-#ifdef CONFIG_MACH_RUBY
 		src_x = zoom_dis_x + (((temp_w - pcrop->in2_w) / 2) * 17 / 20);
-#else
-		src_x = zoom_dis_x + (temp_w - pcrop->in2_w)/2;
-#endif
 		src_y = zoom_dis_y + (temp_h - pcrop->in2_h)/2;
 #else
 		zoom_dis_x = dis_offset->dis_offset_x ;

@@ -33,6 +33,8 @@
 static void spidev_release(struct device *dev)
 {
 	struct spi_device	*spi = to_spi_device(dev);
+	if (!spi)
+		return;
 
 	/* spi masters may cleanup for released devices */
 	if (spi->master->cleanup)
@@ -74,7 +76,10 @@ const struct spi_device_id *spi_get_device_id(const struct spi_device *sdev)
 {
 	const struct spi_driver *sdrv = to_spi_driver(sdev->dev.driver);
 
-	return spi_match_id(sdrv->id_table, sdev);
+	if (sdrv)
+		return spi_match_id(sdrv->id_table, sdev);
+	else
+		return NULL;
 }
 EXPORT_SYMBOL_GPL(spi_get_device_id);
 
@@ -87,7 +92,7 @@ static int spi_match_device(struct device *dev, struct device_driver *drv)
 	if (of_driver_match_device(dev, drv))
 		return 1;
 
-	if (sdrv->id_table)
+	if (sdrv && sdrv->id_table)
 		return !!spi_match_id(sdrv->id_table, spi);
 
 	return strcmp(spi->modalias, drv->name) == 0;
@@ -228,21 +233,28 @@ static int spi_drv_probe(struct device *dev)
 {
 	const struct spi_driver		*sdrv = to_spi_driver(dev->driver);
 
-	return sdrv->probe(to_spi_device(dev));
+	if (sdrv)
+		return sdrv->probe(to_spi_device(dev));
+	else
+		return -ENODEV;
 }
 
 static int spi_drv_remove(struct device *dev)
 {
 	const struct spi_driver		*sdrv = to_spi_driver(dev->driver);
 
-	return sdrv->remove(to_spi_device(dev));
+	if (sdrv)
+		return sdrv->remove(to_spi_device(dev));
+	else
+		return -ENODEV;
 }
 
 static void spi_drv_shutdown(struct device *dev)
 {
 	const struct spi_driver		*sdrv = to_spi_driver(dev->driver);
 
-	sdrv->shutdown(to_spi_device(dev));
+	if (sdrv)
+		sdrv->shutdown(to_spi_device(dev));
 }
 
 /**
@@ -1169,6 +1181,35 @@ int spi_write_and_read(struct spi_device *spi,
 	return status;
 }
 EXPORT_SYMBOL_GPL(spi_write_and_read);
+
+static DEFINE_MUTEX(spi_lock);
+int
+spi_read_write_lock(struct spi_device *spidev, struct spi_msg *msg, char *buf, int size, int func)
+{
+	int err =  -EINVAL;
+	mutex_lock(&spi_lock);
+	switch (func) {
+		case 0:
+			if (!buf)
+				break;
+			err = spi_read(spidev, buf, size);
+			break;
+		case 1:
+			if (!msg)
+				break;
+			err = spi_write(spidev, msg->buffer, (msg->len + 1)*size);
+			break;
+/*
+		case 2:
+			if (!msg)
+				break;
+			err = spi_Duplex(spidev, msg->data, buf, size);
+			break;
+*/
+	}
+	mutex_unlock(&spi_lock);
+	return err;
+}
 
 /*-------------------------------------------------------------------------*/
 

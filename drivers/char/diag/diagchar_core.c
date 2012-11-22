@@ -322,7 +322,8 @@ static int diagchar_close(struct inode *inode, struct file *file)
 	if (driver) {
 #ifdef CONFIG_DIAG_OVER_USB
 		/* If the SD logging process exits, change logging to USB mode */
-		if (driver->logging_process_id == current->tgid) {
+		if (driver->logging_process_id == current->tgid
+			&& (driver->logging_mode != USB_MODE)) {
 			driver->logging_mode = USB_MODE;
 			diagfwd_connect();
 		}

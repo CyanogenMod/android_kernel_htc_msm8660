@@ -187,14 +187,14 @@ void sysinfo_proc_init(void)
 	entry = create_proc_read_entry("emmc", 0, NULL, emmc_partition_read_proc, NULL);
 	CHECK_PROC_ENTRY("emmc", entry);
 
-	entry = create_proc_read_entry("dying_processes", 0, NULL, dying_processors_read_proc, NULL);
-	CHECK_PROC_ENTRY("dying_processes", entry);
-
 	entry = create_proc_read_entry("gpio_info", 0, NULL, sys_gpio_read_proc, NULL);
 	CHECK_PROC_ENTRY("gpio_info", entry);
 
 	entry = create_proc_read_entry("processor_name", 0, NULL, processor_name_read_proc, NULL);
 	CHECK_PROC_ENTRY("processor_name", entry);
+
+	entry = create_proc_read_entry("dying_processes", 0, NULL, dying_processors_read_proc, NULL);
+	CHECK_PROC_ENTRY("dying_processes", entry);
 
 	entry = create_proc_entry("ddr_regs", 0, NULL);
 	if (entry)

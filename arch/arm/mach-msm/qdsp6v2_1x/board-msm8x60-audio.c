@@ -43,7 +43,11 @@
 #ifdef CONFIG_MACH_VIGOR
 #include "timpani_profile_8x60_vigor.h"
 #else
-#include "timpani_profile_8x60_lead.h"
+	#ifdef CONFIG_MACH_VILLEC2
+		#include "timpani_profile_8x60_villec2.h"
+	#else
+		#include "timpani_profile_8x60_lead.h"
+	#endif
 #endif
 
 #include <mach/qdsp6v2_1x/snddev_hdmi.h>

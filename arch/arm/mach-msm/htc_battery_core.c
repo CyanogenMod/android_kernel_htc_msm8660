@@ -618,7 +618,8 @@ int htc_battery_core_update_changed(void)
 	}
 
 	mutex_lock(&battery_core_info.info_lock);
-	if (battery_core_info.rep.charging_source != new_batt_info_rep.charging_source) {
+	if ((battery_core_info.rep.charging_source != new_batt_info_rep.charging_source) ||
+		(battery_core_info.rep.charging_enabled != new_batt_info_rep.charging_enabled)) {
 		if (CHARGER_BATTERY == battery_core_info.rep.charging_source ||
 			CHARGER_BATTERY == new_batt_info_rep.charging_source)
 			is_send_batt_uevent = 1;

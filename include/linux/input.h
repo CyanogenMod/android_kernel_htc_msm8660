@@ -440,6 +440,7 @@ struct input_keymap_entry {
 
 #define KEY_CAMCORDER		248	/* key that control Camera recorder */
 #define KEY_APP_SWITCH		249	/* key for list app*/
+#define KEY_WEIBO		250	/* key for weibo, customize*/
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
 #define BTN_MISC		0x100

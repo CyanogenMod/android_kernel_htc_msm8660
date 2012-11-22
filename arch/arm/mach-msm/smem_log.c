@@ -44,7 +44,7 @@
 #define D_DUMP_BUFFER(prestr, cnt, buf) \
 do { \
 	int i; \
-	printk(KERN_ERR "%s", prestr); \
+	printk(KERN_ERR "[K] %s", prestr); \
 	for (i = 0; i < cnt; i++) \
 		printk(KERN_ERR "%.2x", buf[i]); \
 	printk(KERN_ERR "\n"); \
@@ -657,7 +657,7 @@ static void smem_log_event_from_user(struct smem_log_inst *inst,
 			ret = copy_from_user(&inst->events[idx],
 					     buf, size);
 			if (ret) {
-				printk("ERROR %s:%i tried to write "
+				printk("[K] ERROR %s:%i tried to write "
 				       "%i got ret %i",
 				       __func__, __LINE__,
 				       size, size - ret);
@@ -1031,7 +1031,7 @@ static ssize_t smem_log_write(struct file *fp, const char __user *buf,
 
 	ret = copy_from_user(locbuf, buf, count);
 	if (ret != 0) {
-		printk(KERN_ERR "ERROR: %s could not copy %i bytes\n",
+		printk(KERN_ERR "[K] ERROR: %s could not copy %i bytes\n",
 		       __func__, ret);
 		return -EINVAL;
 	}
@@ -1048,7 +1048,7 @@ static ssize_t smem_log_write(struct file *fp, const char __user *buf,
 			D_DUMP_BUFFER("", strlen(token), token);
 			ret = strict_strtoul(token, 0, &res);
 			if (ret) {
-				printk(KERN_ERR "ERROR: %s:%i got bad char "
+				printk(KERN_ERR "[K] ERROR: %s:%i got bad char "
 				       "at strict_strtoul\n",
 				       __func__, __LINE__-4);
 				return -EINVAL;

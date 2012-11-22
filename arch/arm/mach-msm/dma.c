@@ -214,7 +214,7 @@ unsigned int msm_dmov_print_mask = MSM_DMOV_PRINT_ERRORS;
 #define MSM_DMOV_DPRINTF(mask, format, args...) \
 	do { \
 		if ((mask) & msm_dmov_print_mask) \
-			printk(KERN_ERR format, args); \
+			printk(KERN_ERR "[K][DM] " format, args); \
 	} while (0)
 #define PRINT_ERROR(format, args...) \
 	MSM_DMOV_DPRINTF(MSM_DMOV_PRINT_ERRORS, format, args);
@@ -566,7 +566,7 @@ static int msm_dmov_init_clocks(struct platform_device *pdev)
 
 	dmov_conf[adm].clk = clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(dmov_conf[adm].clk)) {
-		printk(KERN_ERR "%s: Error getting adm_clk\n", __func__);
+		printk(KERN_ERR "[K] %s: Error getting adm_clk\n", __func__);
 		dmov_conf[adm].clk = NULL;
 		return -ENOENT;
 	}
@@ -707,6 +707,7 @@ static int __init msm_init_datamover(void)
 	ret = platform_driver_register(&msm_dmov_driver);
 	if (ret)
 		return ret;
+
 	return 0;
 }
 arch_initcall(msm_init_datamover);

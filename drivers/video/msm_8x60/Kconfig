@@ -223,3 +223,8 @@ config FB_MSM_MIPI_PANEL_DETECT
 config LCDC_TURN_ON_BL_AFTER_PANEL_ON
 	bool "Turn On BL again after turn on LCDC panel"
 	default n
+
+config FB_MSM8960
+	bool "Switch to 8960 codebase under driver/video/msm"
+	depends on FB_MSM
+	default n

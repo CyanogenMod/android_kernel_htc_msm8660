@@ -232,7 +232,7 @@ static int check_version(struct dalrpc_msg_hdr *msg_hdr)
 
 	if (msg_hdr->proto_ver != DALRPC_PROTOCOL_VERSION) {
 		if (version_msg) {
-			printk(KERN_ERR "dalrpc: incompatible verison\n");
+			printk(KERN_ERR "[K] dalrpc: incompatible verison\n");
 			version_msg = 0;
 		}
 		return -1;
@@ -285,7 +285,7 @@ static void process_msg(struct dalrpc_port *p)
 		break;
 
 	default:
-		printk(KERN_ERR "process_msg: bad msgid %#x\n",
+		printk(KERN_ERR "[K] process_msg: bad msgid %#x\n",
 		       p->msg_in.hdr.msgid);
 	}
 }
@@ -310,7 +310,7 @@ static int check_header(struct dalrpc_port *p)
 	    p->msg_in.hdr.len > DALRPC_MAX_MSG_SIZE ||
 	    (p->msg_in.hdr.msgid != DALRPC_MSGID_ASYNCH &&
 	     !client_exists_locked(p->msg_in.hdr.to))) {
-		printk(KERN_ERR "dalrpc_read_msg: bad msg\n");
+		printk(KERN_ERR "[K] dalrpc_read_msg: bad msg\n");
 		flush_msg(p);
 		return 1;
 	}
@@ -413,7 +413,7 @@ static struct dalrpc_port *dalrpc_port_open(char *port, int cpu)
 	snprintf(wq_name, sizeof(wq_name), "dalrpc_rcv_%s", port);
 	p->wq = create_singlethread_workqueue(wq_name);
 	if (!p->wq) {
-		printk(KERN_ERR "dalrpc_init: unable to create workqueue\n");
+		printk(KERN_ERR "[K] dalrpc_init: unable to create workqueue\n");
 		goto no_wq;
 	}
 	INIT_WORK(&p->port_work, dalrpc_work);
@@ -430,7 +430,7 @@ static struct dalrpc_port *dalrpc_port_open(char *port, int cpu)
 
 	if (smd_named_open_on_edge(port, cpu, &p->ch, p,
 				   dalrpc_smd_cb)) {
-		printk(KERN_ERR "dalrpc_port_init() failed to open port\n");
+		printk(KERN_ERR "[K] dalrpc_port_init() failed to open port\n");
 		goto no_smd;
 	}
 
@@ -503,7 +503,7 @@ int daldevice_attach(uint32_t device_id, char *port, int cpu,
 		if (!h->port) {
 			list_del(&h->list);
 			mutex_unlock(&pc_lists_lock);
-			printk(KERN_ERR "daldevice_attach: could not "
+			printk(KERN_ERR "[K] daldevice_attach: could not "
 			       "open port\n");
 			kfree(h);
 			*handle_ptr = NULL;

@@ -295,11 +295,11 @@ static irqreturn_t wdog_bark_handler(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	nanosec_rem = do_div(t, 1000000000);
-	printk(KERN_INFO "Watchdog bark! Now = %lu.%06lu\n", (unsigned long) t,
+	printk(KERN_INFO "[K] Watchdog bark! Now = %lu.%06lu\n", (unsigned long) t,
 		nanosec_rem / 1000);
 
 	nanosec_rem = do_div(last_pet, 1000000000);
-	printk(KERN_INFO "Watchdog last pet at %lu.%06lu\n", (unsigned long)
+	printk(KERN_INFO "[K] Watchdog last pet at %lu.%06lu\n", (unsigned long)
 		last_pet, nanosec_rem / 1000);
 
 	if (print_all_stacks) {

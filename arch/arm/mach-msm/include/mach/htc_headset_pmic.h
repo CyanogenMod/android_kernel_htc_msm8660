@@ -95,6 +95,9 @@ struct htc_35mm_pmic_info {
 	unsigned int hpin_debounce;
 	unsigned int key_irq_type;
 	struct wake_lock hs_wake_lock;
+	/*20120119: Add by Jacky for debug use */
+	struct class* htc_accessory_class;
+	struct device* pmic_dev;
 };
 
 #endif

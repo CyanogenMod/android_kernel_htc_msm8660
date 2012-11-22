@@ -93,6 +93,10 @@ static ssize_t power_supply_show_property(struct device *dev,
 		return sprintf(buf, "%s\n", capacity_level_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_TYPE)
 		return sprintf(buf, "%s\n", type_text[value.intval]);
+	else if (off == POWER_SUPPLY_PROP_OVERLOAD)
+		return sprintf(buf, "%d\n", value.intval);
+	else if (off == POWER_SUPPLY_PROP_AVGCURRENT)
+		return sprintf(buf, "%d\n", value.intval);
 	else if (off >= POWER_SUPPLY_PROP_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
 
@@ -169,6 +173,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
 	POWER_SUPPLY_ATTR(serial_number),
+	POWER_SUPPLY_ATTR(overloading_charge),
+	POWER_SUPPLY_ATTR(avg_current),
 };
 
 static struct attribute *

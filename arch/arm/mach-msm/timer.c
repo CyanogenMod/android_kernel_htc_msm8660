@@ -444,7 +444,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 		} while ((t2 != t1) && --loop_count);
 
 		if (!loop_count) {
-			printk(KERN_EMERG "SCLK  did not stabilize\n");
+			printk(KERN_EMERG "[K] SCLK  did not stabilize\n");
 			return 0;
 		}
 
@@ -455,7 +455,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 	}
 
 	if (!loop_zero_count) {
-		printk(KERN_EMERG "SCLK reads zero\n");
+		printk(KERN_EMERG "[K] SCLK reads zero\n");
 		return 0;
 	}
 
@@ -487,13 +487,13 @@ static uint32_t msm_timer_do_sync_to_sclk(
 
 	smem_clock = smem_alloc(SMEM_SMEM_SLOW_CLOCK_VALUE, sizeof(uint32_t));
 	if (smem_clock == NULL) {
-		printk(KERN_ERR "no smem clock\n");
+		printk(KERN_ERR "[K] no smem clock\n");
 		return 0;
 	}
 
 	state = smsm_get_state(SMSM_MODEM_STATE);
 	if ((state & SMSM_INIT) == 0) {
-		printk(KERN_ERR "smsm not initialized\n");
+		printk(KERN_ERR "[K] smsm not initialized\n");
 		return 0;
 	}
 
@@ -501,7 +501,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 	while ((state = smsm_get_state(SMSM_TIME_MASTER_DEM)) &
 		MASTER_TIME_PENDING) {
 		if (time_expired(data)) {
-			printk(KERN_EMERG "get_smem_clock: timeout 1 still "
+			printk(KERN_EMERG "[K] get_smem_clock: timeout 1 still "
 				"invalid state %x\n", state);
 			msm_timer_sync_timeout();
 		}
@@ -514,7 +514,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 	while (!((state = smsm_get_state(SMSM_TIME_MASTER_DEM)) &
 		MASTER_TIME_PENDING)) {
 		if (time_expired(data)) {
-			printk(KERN_EMERG "get_smem_clock: timeout 2 still "
+			printk(KERN_EMERG "[K] get_smem_clock: timeout 2 still "
 				"invalid state %x\n", state);
 			msm_timer_sync_timeout();
 		}
@@ -535,11 +535,11 @@ static uint32_t msm_timer_do_sync_to_sclk(
 
 		if (msm_timer_debug_mask & MSM_TIMER_DEBUG_SYNC)
 			printk(KERN_INFO
-				"get_smem_clock: state %x clock %u\n",
+				"[K] get_smem_clock: state %x clock %u\n",
 				state, smem_clock_val);
 	} else {
 		printk(KERN_EMERG
-			"get_smem_clock: timeout state %x clock %u\n",
+			"[K] get_smem_clock: timeout state %x clock %u\n",
 			state, smem_clock_val);
 		msm_timer_sync_timeout();
 	}
@@ -564,14 +564,14 @@ static uint32_t msm_timer_do_sync_to_sclk(
 				sizeof(uint32_t));
 
 	if (smem_clock == NULL) {
-		printk(KERN_ERR "no smem clock\n");
+		printk(KERN_ERR "[K] no smem clock\n");
 		return 0;
 	}
 
 	last_state = state = smsm_get_state(SMSM_MODEM_STATE);
 	smem_clock_val = *smem_clock;
 	if (smem_clock_val) {
-		printk(KERN_INFO "get_smem_clock: invalid start state %x "
+		printk(KERN_INFO "[K] get_smem_clock: invalid start state %x "
 			"clock %u\n", state, smem_clock_val);
 		smsm_change_state(SMSM_APPS_STATE,
 				  SMSM_TIMEWAIT, SMSM_TIMEINIT);
@@ -582,7 +582,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 
 		smem_clock_val = *smem_clock;
 		if (smem_clock_val) {
-			printk(KERN_EMERG "get_smem_clock: timeout still "
+			printk(KERN_EMERG "[K] get_smem_clock: timeout still "
 				"invalid state %x clock %u\n",
 				state, smem_clock_val);
 			msm_timer_sync_timeout();
@@ -598,7 +598,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 			last_state = state;
 			if (msm_timer_debug_mask & MSM_TIMER_DEBUG_SYNC)
 				printk(KERN_INFO
-					"get_smem_clock: state %x clock %u\n",
+					"[K] get_smem_clock: state %x clock %u\n",
 					state, smem_clock_val);
 		}
 	} while (smem_clock_val == 0 && !time_expired(data));
@@ -608,7 +608,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 			update(data, smem_clock_val, sclk_hz);
 	} else {
 		printk(KERN_EMERG
-			"get_smem_clock: timeout state %x clock %u\n",
+			"[K] get_smem_clock: timeout state %x clock %u\n",
 			state, smem_clock_val);
 		msm_timer_sync_timeout();
 	}
@@ -677,7 +677,7 @@ static void msm_timer_sync_update(struct msm_timer_sync_data_t *data,
 				new_offset - dst_clk_state->sleep_offset;
 
 		if (msm_timer_debug_mask & MSM_TIMER_DEBUG_SYNC)
-			printk(KERN_INFO "sync clock %s: "
+			printk(KERN_INFO "[K] sync clock %s: "
 				"src %u, new offset %u + %u\n",
 				dst_clk->clocksource.name, src_clk_val,
 				dst_clk_state->sleep_offset,
@@ -794,7 +794,7 @@ int64_t msm_timer_enter_idle(void)
 	delta = alarm - count;
 	if (delta <= -(int32_t)((clock->freq << clock->shift) >> 10)) {
 		/* timer should have triggered 1ms ago */
-		printk(KERN_ERR "msm_timer_enter_idle: timer late %d, "
+		printk(KERN_ERR "[K] msm_timer_enter_idle: timer late %d, "
 			"reprogram it\n", delta);
 		msm_timer_reactivate_alarm(clock);
 	}
@@ -923,7 +923,7 @@ int __init msm_timer_init_time_sync(void (*timeout)(void))
 	int ret = smsm_change_intr_mask(SMSM_TIME_MASTER_DEM, 0xFFFFFFFF, 0);
 
 	if (ret) {
-		printk(KERN_ERR	"%s: failed to clear interrupt mask, %d\n",
+		printk(KERN_ERR	"[K] %s: failed to clear interrupt mask, %d\n",
 			__func__, ret);
 		return ret;
 	}
@@ -1138,12 +1138,12 @@ static void __init msm_timer_init(void)
 		cs->mult = clocksource_hz2mult(clock->freq, cs->shift);
 		res = clocksource_register(cs);
 		if (res)
-			printk(KERN_ERR "msm_timer_init: clocksource_register "
+			printk(KERN_ERR "[K] msm_timer_init: clocksource_register "
 			       "failed for %s\n", cs->name);
 
 		res = setup_irq(clock->irq.irq, &clock->irq);
 		if (res)
-			printk(KERN_ERR "msm_timer_init: setup_irq "
+			printk(KERN_ERR "[K] msm_timer_init: setup_irq "
 			       "failed for %s\n", cs->name);
 
 		chip = irq_get_chip(clock->irq.irq);

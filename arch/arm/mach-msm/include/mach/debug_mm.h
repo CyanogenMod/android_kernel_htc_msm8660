@@ -23,9 +23,24 @@
 #define MM_DBG(fmt, args...) pr_debug("[%s] " fmt,\
 		__func__, ##args)
 
+#define MM_AUD_DBG(fmt, args...) pr_debug("[AUD][%s:%s] " fmt,\
+			   __MM_FILE__, __func__, ##args)
+
 #define MM_INFO(fmt, args...) pr_info("[%s:%s] " fmt,\
 	       __MM_FILE__, __func__, ##args)
 
+#if 1
+#define MM_AUD_INFO(fmt, args...)    do { } while (0)
+
+#else
+#define MM_AUD_INFO(fmt, args...) pr_info("[AUD][%s:%s] " fmt,\
+			   __MM_FILE__, __func__, ##args)
+#endif
+
 #define MM_ERR(fmt, args...) pr_err("[%s:%s] " fmt,\
 	       __MM_FILE__, __func__, ##args)
+
+#define MM_AUD_ERR(fmt, args...) pr_err("[AUD][%s:%s] " fmt,\
+	       __MM_FILE__, __func__, ##args)
+
 #endif /* __ARCH_ARM_MACH_MSM_DEBUG_MM_H_ */

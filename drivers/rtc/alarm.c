@@ -77,7 +77,7 @@ struct alarm_queue alarms[ANDROID_ALARM_TYPE_COUNT];
 static bool suspended;
 
 
-#ifdef HTC_QUICKBOOT_OFFMODE_ALARM
+#ifdef CONFIG_HTC_QUICKBOOT_OFFMODE_ALARM
 int htc_is_offalarm_enabled(void);
 #endif
 
@@ -498,7 +498,7 @@ static int alarm_resume(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef HTC_QUICKBOOT_OFFMODE_ALARM
+#ifdef CONFIG_HTC_QUICKBOOT_OFFMODE_ALARM
 /* return the nearest alarm time */
 static int find_offmode_alarm(void)
 {
@@ -595,7 +595,7 @@ static struct class_interface rtc_alarm_interface = {
 static struct platform_driver alarm_driver = {
 	.suspend = alarm_suspend,
 	.resume = alarm_resume,
-#ifdef HTC_QUICKBOOT_OFFMODE_ALARM
+#ifdef CONFIG_HTC_QUICKBOOT_OFFMODE_ALARM
 	.shutdown = alarm_shutdown,
 #endif
 	.driver = {

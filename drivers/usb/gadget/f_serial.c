@@ -309,6 +309,8 @@ static enum fserial_func_type serial_str_to_func_type(const char *name)
 		return USB_FSER_FUNC_MODEM_MDM;
 	if (!strcasecmp("SERIAL", name))
 		return USB_FSER_FUNC_SERIAL;
+	if (!strcasecmp("AUTOBOT", name))
+		return USB_FSER_FUNC_AUTOBOT;
 
 	return USB_FSER_FUNC_NONE;
 }
@@ -909,7 +911,8 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 	}
 
 	if (gser_string_defs[0].id == 0 &&
-			p->func_type == USB_FSER_FUNC_SERIAL) {
+			(p->func_type == USB_FSER_FUNC_SERIAL
+			|| p->func_type == USB_FSER_FUNC_AUTOBOT)) {
 		status = usb_string_id(c->cdev);
 		if (status < 0) {
 			printk(KERN_ERR "%s: return %d\n", __func__, status);
@@ -966,6 +969,7 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 		gser_interface_desc.iInterface = modem_string_defs[1].id;
 		break;
 	case USB_FSER_FUNC_SERIAL:
+	case USB_FSER_FUNC_AUTOBOT:
 		gser->port.func.name = "serial";
 		gser->port.func.strings = gser_strings;
 		gser_interface_desc.iInterface = gser_string_defs[0].id;

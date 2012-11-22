@@ -53,6 +53,7 @@ static int vsync_start_y_adjust = 4;
 #define PADDING_DISABLE	3
 
 static int writeback_offset;
+void mdp_color_enhancement(const struct mdp_reg *reg_seq, int size);
 
 static __u32 msm_fb_line_length(__u32 fb_index, __u32 xres, int bpp)
 {
@@ -86,6 +87,18 @@ void dsi_mutex_unlock(void)
 {
 	if (dsi_mfd)
 		mutex_unlock(&dsi_mfd->dma->ov_mutex);
+}
+
+void mdp4_dsi_color_enhancement(const struct mdp_reg *reg_seq, int size)
+{
+
+	printk(KERN_INFO "%s\n", __func__);
+	dsi_mutex_lock();
+	dsi_busy_check();
+	mdp_color_enhancement(reg_seq, size);
+	dsi_mutex_unlock();
+
+	return ;
 }
 
 void mdp4_mipi_vsync_enable(struct msm_fb_data_type *mfd,
@@ -366,6 +379,7 @@ void mdp4_dsi_cmd_3d(struct msm_fb_data_type *mfd, struct msmfb_overlay_3d *r3d)
 	if (dsi_pipe->blt_addr)
 		mdp4_dsi_blt_dmap_busy_wait(mfd);
 #endif
+	mdp_set_core_clk(1);
 
 	fbi = mfd->fbi;
 	if (pipe->is_3d) {
@@ -737,11 +751,34 @@ void mdp4_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd,
 				atomic_dec(&busy_wait_cnt);
 				break;
 			} else {
-				if (log_count++ < 100) {
+				if (log_count++ < 5) {
 					PR_DISP_INFO("%s(%d)timeout but dma still busy\n", __func__, __LINE__);
 					PR_DISP_INFO("###busy_wait_cnt:%d blt_end:%d blt_cnt:%d ov_cnt:%d dmap_cnt:%d blt_addr:%lu\n",
 						atomic_read(&busy_wait_cnt), dsi_pipe->blt_end, dsi_pipe->blt_cnt, dsi_pipe->ov_cnt,
 						dsi_pipe->dmap_cnt, dsi_pipe->blt_addr);
+					PR_DISP_INFO("MDP_DISPLAY_STATUS:%x\n", inpdw(msm_mdp_base + 0x18));
+					PR_DISP_INFO("MDP_INTR_STATUS:%x\n", inpdw(MDP_INTR_STATUS));
+					PR_DISP_INFO("MDP_INTR_ENABLE:%x\n", inpdw(MDP_INTR_ENABLE));
+					PR_DISP_INFO("MDP_LAYERMIXER_IN_CFG:%x\n", inpdw(msm_mdp_base + 0x10100));
+					PR_DISP_INFO("MDP_OVERLAY_STATUS:%x\n", inpdw(msm_mdp_base + 0x10000));
+					PR_DISP_INFO("MDP_OVERLAYPROC0_CFG:%x\n", inpdw(msm_mdp_base + 0x10004));
+					PR_DISP_INFO("MDP_OVERLAYPROC1_CFG:%x\n", inpdw(msm_mdp_base + 0x18004));
+					PR_DISP_INFO("RGB1(1):%x %x %x %x\n", inpdw(msm_mdp_base + 0x40000), inpdw(msm_mdp_base + 0x40004), inpdw(msm_mdp_base + 0x40008), inpdw(msm_mdp_base + 0x4000C));
+					PR_DISP_INFO("RGB1(2):%x %x %x %x\n", inpdw(msm_mdp_base + 0x40010), inpdw(msm_mdp_base + 0x40014), inpdw(msm_mdp_base + 0x40018), inpdw(msm_mdp_base + 0x40040));
+					PR_DISP_INFO("RGB1(3):%x %x %x %x\n", inpdw(msm_mdp_base + 0x40050), inpdw(msm_mdp_base + 0x40054), inpdw(msm_mdp_base + 0x40058), inpdw(msm_mdp_base + 0x4005C));
+					PR_DISP_INFO("RGB1(4):%x %x %x %x\n", inpdw(msm_mdp_base + 0x40060), inpdw(msm_mdp_base + 0x41000), inpdw(msm_mdp_base + 0x41004), inpdw(msm_mdp_base + 0x41008));
+					PR_DISP_INFO("RGB2(1):%x %x %x %x\n", inpdw(msm_mdp_base + 0x50000), inpdw(msm_mdp_base + 0x50004), inpdw(msm_mdp_base + 0x50008), inpdw(msm_mdp_base + 0x5000C));
+					PR_DISP_INFO("RGB2(2):%x %x %x %x\n", inpdw(msm_mdp_base + 0x50010), inpdw(msm_mdp_base + 0x50014), inpdw(msm_mdp_base + 0x50018), inpdw(msm_mdp_base + 0x50040));
+					PR_DISP_INFO("RGB2(3):%x %x %x %x\n", inpdw(msm_mdp_base + 0x50050), inpdw(msm_mdp_base + 0x50054), inpdw(msm_mdp_base + 0x50058), inpdw(msm_mdp_base + 0x5005C));
+					PR_DISP_INFO("RGB2(4):%x %x %x %x\n", inpdw(msm_mdp_base + 0x50060), inpdw(msm_mdp_base + 0x51000), inpdw(msm_mdp_base + 0x51004), inpdw(msm_mdp_base + 0x51008));
+					PR_DISP_INFO("VG1 (1):%x %x %x %x\n", inpdw(msm_mdp_base + 0x20000), inpdw(msm_mdp_base + 0x20004), inpdw(msm_mdp_base + 0x20008), inpdw(msm_mdp_base + 0x2000C));
+					PR_DISP_INFO("VG1 (2):%x %x %x %x\n", inpdw(msm_mdp_base + 0x20010), inpdw(msm_mdp_base + 0x20014), inpdw(msm_mdp_base + 0x20018), inpdw(msm_mdp_base + 0x20040));
+					PR_DISP_INFO("VG1 (3):%x %x %x %x\n", inpdw(msm_mdp_base + 0x20050), inpdw(msm_mdp_base + 0x20054), inpdw(msm_mdp_base + 0x20058), inpdw(msm_mdp_base + 0x2005C));
+					PR_DISP_INFO("VG1 (4):%x %x %x %x\n", inpdw(msm_mdp_base + 0x20060), inpdw(msm_mdp_base + 0x21000), inpdw(msm_mdp_base + 0x21004), inpdw(msm_mdp_base + 0x21008));
+					PR_DISP_INFO("VG2 (1):%x %x %x %x\n", inpdw(msm_mdp_base + 0x30000), inpdw(msm_mdp_base + 0x30004), inpdw(msm_mdp_base + 0x30008), inpdw(msm_mdp_base + 0x3000C));
+					PR_DISP_INFO("VG2 (2):%x %x %x %x\n", inpdw(msm_mdp_base + 0x30010), inpdw(msm_mdp_base + 0x30014), inpdw(msm_mdp_base + 0x30018), inpdw(msm_mdp_base + 0x30040));
+					PR_DISP_INFO("VG2 (3):%x %x %x %x\n", inpdw(msm_mdp_base + 0x30050), inpdw(msm_mdp_base + 0x30054), inpdw(msm_mdp_base + 0x30058), inpdw(msm_mdp_base + 0x3005C));
+					PR_DISP_INFO("VG2 (4):%x %x %x %x\n", inpdw(msm_mdp_base + 0x30060), inpdw(msm_mdp_base + 0x31000), inpdw(msm_mdp_base + 0x31004), inpdw(msm_mdp_base + 0x31008));
 				}
 				INIT_COMPLETION(mfd->dma->comp);
 				timeout = wait_for_completion_timeout(&mfd->dma->comp, HZ/5);

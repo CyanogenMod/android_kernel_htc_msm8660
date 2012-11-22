@@ -38,6 +38,7 @@ struct keyreset_state {
 };
 
 static int restart_requested;
+
 static void deferred_restart(struct work_struct *dummy)
 {
 	pr_info("keyreset::%s in\n", __func__);
@@ -76,6 +77,7 @@ static void keyreset_event(struct input_handle *handle, unsigned int type,
 	if (!test_bit(code, state->key) == !value)
 		goto done;
 	__change_bit(code, state->key);
+
 	if (test_bit(code, state->upbit)) {
 		if (value) {
 			state->restart_disabled = 1;
@@ -185,7 +187,7 @@ static int keyreset_probe(struct platform_device *pdev)
 
 	if (!board_build_flag()) {
 		printk(KERN_INFO "[KEY] Ship code, disable key reset.\n");
-		return -EINVAL;
+		return 0;
 	}
 
 	if (!pdata)
@@ -229,8 +231,10 @@ static int keyreset_probe(struct platform_device *pdev)
 int keyreset_remove(struct platform_device *pdev)
 {
 	struct keyreset_state *state = platform_get_drvdata(pdev);
-	input_unregister_handler(&state->input_handler);
-	kfree(state);
+	if (board_build_flag()) {
+		input_unregister_handler(&state->input_handler);
+		kfree(state);
+	}
 	return 0;
 }
 

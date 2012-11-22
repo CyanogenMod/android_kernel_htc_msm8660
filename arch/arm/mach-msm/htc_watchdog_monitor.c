@@ -157,7 +157,7 @@ void htc_watchdog_top_stat(void)
 	memset(curr_proc_delta, 0, sizeof(int) * MAX_PID);
 	memset(task_ptr_array, 0, sizeof(int) * MAX_PID);
 
-	printk(KERN_ERR"\n\n[%s] Start to dump:\n", __func__);
+	printk(KERN_ERR"\n\n[K][%s] Start to dump:\n", __func__);
 
 	spin_lock_irqsave(&lock, flags);
 	get_all_cpu_stat(&new_cpu_stat);
@@ -190,9 +190,9 @@ void htc_watchdog_top_stat(void)
 	delta_time = user_time + system_time + io_time + irq_time + idle_time;
 
 	/* print most time consuming processes */
-	printk(KERN_ERR"CPU\t\tPID\t\tName\n");
+	printk(KERN_ERR"[K] CPU\t\tPID\t\tName\n");
 	for (i = 0; i < NUM_BUSY_THREAD_CHECK; i++) {
-		printk(KERN_ERR "%lu%%\t\t%d\t\t%s\n",
+		printk(KERN_ERR "[K] %lu%%\t\t%d\t\t%s\n",
 			curr_proc_delta[top_loading[i]] * 100 / delta_time,
 			top_loading[i],
 			task_ptr_array[top_loading[i]]->comm);

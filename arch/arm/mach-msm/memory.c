@@ -64,7 +64,7 @@ void map_page_strongly_ordered(void)
 	map.type = MT_DEVICE_STRONGLY_ORDERED;
 	create_mapping(&map);
 
-	printk(KERN_ALERT "Initialized strongly ordered page successfully\n");
+	printk(KERN_ALERT "[K] Initialized strongly ordered page successfully\n");
 #endif
 }
 EXPORT_SYMBOL(map_page_strongly_ordered);
@@ -76,7 +76,7 @@ void write_to_strongly_ordered_memory(void)
 		if (!in_interrupt())
 			map_page_strongly_ordered();
 		else {
-			printk(KERN_ALERT "Cannot map strongly ordered page in "
+			printk(KERN_ALERT "[K] Cannot map strongly ordered page in "
 				"Interrupt Context\n");
 			/* capture it here before the allocation fails later */
 			BUG();

@@ -67,6 +67,7 @@ extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 extern int usb_get_connect_type(void); // msm72k_udc.c
 
 #ifdef BCM4329_LOW_POWER
+int LowPowerMode = 1;
 extern char gatewaybuf[8+1]; //HTC_KlocWork
 char ip_str[32];
 bool hasDLNA = false;
@@ -743,15 +744,16 @@ char iovbuf[32];
 #endif /* CUSTOMER_HW2 */
 #endif
 #ifdef BCM4329_LOW_POWER
-             if (!hasDLNA && !allowMulticast)
-             {
+		if (LowPowerMode == 1) {
+			if (!hasDLNA && !allowMulticast) {
 				/* ignore broadcast and multicast packet*/
 				bcm_mkiovar("pm_ignore_bcmc", (char *)&ignore_bcmc,
 					4, iovbuf, sizeof(iovbuf));
 				dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
 				/* keep alive packet*/
 				dhd_set_keepalive(1);
-		      }
+			}
+		}
 #endif
 #ifdef PNO_SUPPORT
 				/* set pfn */
@@ -798,13 +800,15 @@ char iovbuf[32];
 #endif /* CUSTOMER_HW2 */
 #endif
 #ifdef BCM4329_LOW_POWER
+				if (LowPowerMode == 1) {
 					ignore_bcmc = 0;
-				/* Not ignore broadcast and multicast packet*/
-				bcm_mkiovar("pm_ignore_bcmc", (char *)&ignore_bcmc,
-					4, iovbuf, sizeof(iovbuf));
-				dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
-				/* Disable keep alive packet*/
-				dhd_set_keepalive(0);
+					/* Not ignore broadcast and multicast packet*/
+					bcm_mkiovar("pm_ignore_bcmc", (char *)&ignore_bcmc,
+						4, iovbuf, sizeof(iovbuf));
+					dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
+					/* Disable keep alive packet*/
+					dhd_set_keepalive(0);
+				}
 #endif
 #ifdef PNO_SUPPORT
 				dhd_set_pfn(dhd, 0);
@@ -969,10 +973,11 @@ int dhd_set_pktfilter(dhd_pub_t * dhd, int add, int id, int offset, char *mask, 
 	printf("Enter set packet filter\n");
 
 #ifdef BCM4329_LOW_POWER
-	if (add == 1 && pkt_id == 105)
-	{
-		printf("MCAST packet filter, hasDLNA is true\n");
-		hasDLNA = true;
+	if (LowPowerMode == 1) {
+		if (add == 1 && pkt_id == 105) {
+			printf("MCAST packet filter, hasDLNA is true\n");
+			hasDLNA = true;
+		}
 	}
 #endif
 
@@ -1027,9 +1032,11 @@ int dhd_set_pktfilter(dhd_pub_t * dhd, int add, int id, int offset, char *mask, 
 		(char *) pkt_filterp->u.pattern.mask_and_pattern));
 
 #ifdef BCM4329_LOW_POWER
-	if (add == 1 && id == 101){
-		memcpy(ip_str, pattern+78, 8);
-		DHD_TRACE(("ip: %s", ip_str));
+	if (LowPowerMode == 1) {
+		if (add == 1 && id == 101) {
+			memcpy(ip_str, pattern+78, 8);
+			DHD_TRACE(("ip: %s", ip_str));
+		}
 	}
 #endif
 	/* Parse pattern filter pattern. */
@@ -1177,11 +1184,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif  /* GET_CUSTOM_MAC_ENABLE */
 
 	/* Set Country code */
-	if (dhd->country_code[0] != 0) {
-		if (dhdcdc_set_ioctl(dhd, 0, WLC_SET_COUNTRY,
-			dhd->country_code, sizeof(dhd->country_code)) < 0) {
+	if (dhd->dhd_cspec.ccode[0] != 0) {
+		bcm_mkiovar("country", (char *)&dhd->dhd_cspec, sizeof(wl_country_t), buf, sizeof(buf));
+		if ((ret = dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, buf, sizeof(buf))) < 0)
 			DHD_ERROR(("%s: country code setting failed\n", __FUNCTION__));
-		}
 	}
 
 	/* Set Listen Interval */
@@ -1331,7 +1337,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif
 // packet filter for Rogers nat keep alive +++
 	if (filter_reverse)
-		dhd_set_pktfilter(dhd, 1, DENY_NAT_KEEP_ALIVE, 26, "0xFFFF0000000000000000FFFFFFFF", "0xC123880000000000000011940009");
+		dhd_set_pktfilter(dhd, 1, DENY_NAT_KEEP_ALIVE, 26, "0xFFFF0000000000000000FFFFFFFF", "0x4AC6000000000000000011940009");
 // packet filter for Rogers nat keep alive ---
 #else
 	dhd->pktfilter_count = 1;

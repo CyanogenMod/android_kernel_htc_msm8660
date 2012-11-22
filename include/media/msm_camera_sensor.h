@@ -78,7 +78,7 @@
 #endif
 #endif
 
-
+#define CFG_DEINIT 100
 
 
 #define MOVE_NEAR	0

@@ -616,7 +616,7 @@ int __irq_set_trigger(struct irq_desc *desc, unsigned int irq,
 		ret = 0;
 		break;
 	default:
-		pr_err("setting trigger mode %lu for irq %u failed (%pF)\n",
+		pr_err("[K] setting trigger mode %lu for irq %u failed (%pF)\n",
 		       flags, irq, chip->irq_set_type);
 	}
 	if (unmask)

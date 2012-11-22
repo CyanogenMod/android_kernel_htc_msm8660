@@ -316,8 +316,6 @@ static void notify_other_smsm(uint32_t smsm_entry, uint32_t notify_mask)
 				& notify_mask)) {
 		MSM_TRIG_A2DSPS_SMSM_INT;
 	}
-
-	schedule_work(&smsm_cb_work);
 }
 
 static inline void notify_modem_smd(void)
@@ -373,7 +371,21 @@ int smd_diag(void)
 	return ret;
 }
 
+#if defined(CONFIG_ARCH_MSM7X25) || defined(CONFIG_ARCH_MSM7X27)
+static void handle_modem_crash(void)
+{
+	pr_err("MODEM/AMSS has CRASHED\n");
+	smd_diag();
 
+	/* hard reboot if possible */
+	if (msm_hw_reset_hook)
+		msm_hw_reset_hook();
+
+	/* in this case the modem or watchdog should reboot us */
+	for (;;)
+		;
+}
+#else
 static void handle_modem_crash(void)
 {
 #ifdef CONFIG_MSM_NATIVE_RESTART
@@ -394,7 +406,7 @@ static void handle_modem_crash(void)
 		arm_pm_restart(RESTART_MODE_MODEM_CRASH, "force-hard");
 #endif
 }
-
+#endif
 int smsm_check_for_modem_crash(void)
 {
 	/* if the modem's not ready yet, we have to hope for the best */

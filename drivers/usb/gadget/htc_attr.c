@@ -33,6 +33,7 @@ enum {
 	USB_FUNCTION_MODEM_MDM, /* 14 */
 	USB_FUNCTION_MTP36,
 	USB_FUNCTION_USBNET,
+	USB_FUNCTION_AUTOBOT = 30,
 	USB_FUNCTION_RNDIS_IPT = 31,
 };
 
@@ -279,7 +280,7 @@ int android_switch_function(unsigned func)
 	struct android_usb_function **functions = dev->functions;
 	struct android_usb_function *f;
 	struct android_usb_product *product;
-	int product_id, vendor_id;
+	int product_id, vendor_id, autobot_mode = 0;
 	unsigned val;
 
 	/* framework may try to enable adb before android_usb_init_work is done.*/
@@ -301,12 +302,13 @@ int android_switch_function(unsigned func)
 		return 0;
 	}
 
+	is_mtp_enabled = false;
+
 	usb_gadget_disconnect(dev->cdev->gadget);
 	usb_remove_config(dev->cdev, &android_config_driver);
 
 	INIT_LIST_HEAD(&dev->enabled_functions);
 
-	is_mtp_enabled = false;
 	while ((f = *functions++)) {
 		if ((func & (1 << USB_FUNCTION_UMS)) &&
 				!strcmp(f->name, "mass_storage"))
@@ -337,9 +339,13 @@ int android_switch_function(unsigned func)
 			func |= 1 << USB_FUNCTION_MODEM_MDM;
 #endif
 		} else if ((func & (1 << USB_FUNCTION_SERIAL)) &&
-				!strcmp(f->name, "serial"))
+				!strcmp(f->name, "serial")) {
+			if (func & (1 << USB_FUNCTION_AUTOBOT)
+					&& (dev->autobot_mode != 1)) {
+				autobot_mode = 1;
+			}
 			list_add_tail(&f->enabled_list, &dev->enabled_functions);
-		else if ((func & (1 << USB_FUNCTION_MTP)) &&
+		} else if ((func & (1 << USB_FUNCTION_MTP)) &&
 				!strcmp(f->name, "mtp")) {
 			list_add_tail(&f->enabled_list, &dev->enabled_functions);
 			is_mtp_enabled = true;
@@ -391,6 +397,8 @@ int android_switch_function(unsigned func)
 		product_id =  dev->pdata->product_id;
 	}
 
+	dev->autobot_mode = autobot_mode;
+
 	/* We need to specify the COMM class in the device descriptor
 	 * if we are using RNDIS.
 	 */
@@ -417,8 +425,7 @@ int android_switch_function(unsigned func)
 	usb_add_config(dev->cdev, &android_config_driver, android_bind_config);
 
 	/* reset usb controller/phy for USB stability */
-	if(dev->pdata && dev->pdata->req_reset_during_switch_func)
-		usb_gadget_request_reset(dev->cdev->gadget);
+	usb_gadget_request_reset(dev->cdev->gadget);
 
 	mdelay(100);
 	usb_gadget_connect(dev->cdev->gadget);
@@ -444,7 +451,8 @@ void android_switch_htc_mode(void)
 	android_switch_function((1 << USB_FUNCTION_ADB) |
 				(1 << USB_FUNCTION_PROJECTOR) |
 				(1 << USB_FUNCTION_SERIAL) |
-				(1 << USB_FUNCTION_UMS));
+				(1 << USB_FUNCTION_UMS) |
+				(1 << USB_FUNCTION_AUTOBOT));
 }
 
 

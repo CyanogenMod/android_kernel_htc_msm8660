@@ -3639,13 +3639,8 @@ void hdmi_hpd_feature(int enable)
 			external_common_state->hpd_feature_on = 1;
 			mutex_unlock(&external_common_state_hpd_mutex);
 		} else {
-			if (hdmi_msm_state->panel_power_on == FALSE) {
-				DEV_INFO("HDMI HPD: sense DISCONNECTED: send OFFLINE\n");
-				hdmi_msm_state->hdmi_state = HDMI_STATE_INIT;
-				kobject_uevent(external_common_state->uevent_kobj,
-					KOBJ_OFFLINE);
+			if (hdmi_msm_state->panel_power_on == FALSE)
 				external_common_state->hpd_feature(0);
-			}
 			mutex_lock(&external_common_state_hpd_mutex);
 			external_common_state->hpd_feature_on = 0;
 			mutex_unlock(&external_common_state_hpd_mutex);

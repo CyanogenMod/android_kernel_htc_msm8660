@@ -23,9 +23,9 @@
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 
-#ifndef CONFIG_ARCH_MSM7X30
+#if !defined(CONFIG_ARCH_MSM7X30) && !defined(CONFIG_ARCH_MSM7X27A)
 #include <mach/scm.h>
-#else	/* CONFIG_ARCH_MSM7X30 */
+#else	/* CONFIG_ARCH_MSM7X30 && CONFIG_ARCH_MSM7X27A */
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/mm.h>
@@ -45,7 +45,7 @@
 #define OEM_RAPI_STREAMING_FUNCTION_PROC          2
 
 #define OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE 32
-#endif	/* CONFIG_ARCH_MSM7X30 */
+#endif	/* CONFIG_ARCH_MSM7X30 && CONFIG_ARCH_MSM7X27A */
 
 #define DEVICE_NAME "htc_sdservice"
 
@@ -85,7 +85,7 @@ enum {
 		HTC_SD_KEY_DECRYPT,
 };
 
-#ifdef CONFIG_ARCH_MSM7X30
+#if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM7X27A)
 static struct msm_rpc_client *rpc_client;
 static DEFINE_MUTEX(oem_rapi_client_lock);
 /* TODO: check where to allocate memory for return */
@@ -296,7 +296,7 @@ ssize_t oem_rapi_pack_send(unsigned int operation, char *buf, size_t size)
 
 	return 0;
 }
-#endif /* CONFIG_ARCH_MSM7X30 */
+#endif /* CONFIG_ARCH_MSM7X30 && CONFIG_ARCH_MSM7X27A */
 
 static long htc_sdservice_ioctl(struct file *file, unsigned int command, unsigned long arg)
 {
@@ -310,9 +310,9 @@ static long htc_sdservice_ioctl(struct file *file, unsigned int command, unsigne
 			PERR("copy_from_user error (msg)");
 			return -EFAULT;
 		}
-#ifdef CONFIG_ARCH_MSM7X30
+#if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM7X27A)
 		oem_rapi_client_init2();
-#endif /* CONFIG_ARCH_MSM7X30 */
+#endif /* CONFIG_ARCH_MSM7X30 && CONFIG_ARCH_MSM7X27A */
 		PDEBUG("func = %x\n", hmsg.func);
 		switch (hmsg.func) {
 		case HTC_SD_KEY_ENCRYPT:
@@ -324,12 +324,12 @@ static long htc_sdservice_ioctl(struct file *file, unsigned int command, unsigne
 				PERR("copy_from_user error (sdkey)");
 				return -EFAULT;
 			}
-#ifdef CONFIG_ARCH_MSM7X30
+#if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM7X27A)
 			ret = oem_rapi_pack_send(OEM_RAPI_CLIENT_EVENT_SDSERVICE_ENC, htc_sdkey, hmsg.req_len);
 			oem_rapi_client_close2();
 #else
 			ret = secure_access_item(0, HTC_SD_KEY_ENCRYPT, hmsg.req_len, htc_sdkey);
-#endif	/* CONFIG_ARCH_MSM7X30 */
+#endif	/* CONFIG_ARCH_MSM7X30  && CONFIG_ARCH_MSM7X27A*/
 			if (ret)
 				PERR("Encrypt SD key fail (%d)\n", ret);
 
@@ -348,12 +348,12 @@ static long htc_sdservice_ioctl(struct file *file, unsigned int command, unsigne
 				PERR("copy_from_user error (sdkey)");
 				return -EFAULT;
 			}
-#ifdef CONFIG_ARCH_MSM7X30
+#if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM7X27A)
 			ret = oem_rapi_pack_send(OEM_RAPI_CLIENT_EVENT_SDSERVICE_DEC, htc_sdkey, hmsg.req_len);
 			oem_rapi_client_close2();
 #else
 			ret = secure_access_item(0, HTC_SD_KEY_DECRYPT, hmsg.req_len, htc_sdkey);
-#endif	/* CONFIG_ARCH_MSM7X30 */
+#endif	/* CONFIG_ARCH_MSM7X30 && CONFIG_ARCH_MSM7X27A */
 			if (ret)
 				PERR("Encrypt SD key fail (%d)\n", ret);
 

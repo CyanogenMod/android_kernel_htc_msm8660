@@ -42,6 +42,8 @@ int msm_chg_usb_i_is_not_available(void);
 int msm_chg_usb_charger_disconnected(void);
 int msm_chg_rpc_close(void);
 
+int hsusb_rpc_connect(int connect);
+
 #ifdef CONFIG_USB_GADGET_MSM_72K
 int hsusb_chg_init(int connect);
 void hsusb_chg_vbus_draw(unsigned mA);

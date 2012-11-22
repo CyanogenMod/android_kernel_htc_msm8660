@@ -64,7 +64,7 @@
 
 extern struct s5k6aafx_reg s5k6aafx_regs;
 
-#if defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_K) || defined(CONFIG_MACH_SHOOTER_U) || defined(CONFIG_MACH_RIDER) || defined(CONFIG_MACH_HOLIDAY) || defined(CONFIG_MACH_VERDI_LTE) || defined(CONFIG_MACH_KINGDOM) || defined(CONFIG_MACH_SHOOTER_CT)
+#if defined(CONFIG_MACH_SHOOTER) || defined(CONFIG_MACH_SHOOTER_K) || defined(CONFIG_MACH_SHOOTER_U) || defined(CONFIG_MACH_RIDER)  || defined(CONFIG_MACH_VILLEC2) || defined(CONFIG_MACH_HOLIDAY) || defined(CONFIG_MACH_VERDI_LTE) || defined(CONFIG_MACH_KINGDOM) || defined(CONFIG_MACH_SHOOTER_CT)
 extern struct s5k6aafx_reg s5k6aafx_regs_cob;
 #else
 #define s5k6aafx_regs_cob s5k6aafx_regs

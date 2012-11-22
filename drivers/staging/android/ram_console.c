@@ -197,13 +197,13 @@ ram_console_save_old(struct ram_console_buffer *buffer, const char *bootinfo,
 		numerr = ram_console_decode_rs8(block, size, par);
 		if (numerr > 0) {
 #if 0
-			printk(KERN_INFO "ram_console: error in block %p, %d\n",
+			printk(KERN_INFO "[K] ram_console: error in block %p, %d\n",
 			       block, numerr);
 #endif
 			ram_console_corrected_bytes += numerr;
 		} else if (numerr < 0) {
 #if 0
-			printk(KERN_INFO "ram_console: uncorrectable error in "
+			printk(KERN_INFO "[K] ram_console: uncorrectable error in "
 			       "block %p\n", block);
 #endif
 			ram_console_bad_blocks++;
@@ -231,7 +231,7 @@ ram_console_save_old(struct ram_console_buffer *buffer, const char *bootinfo,
 		dest = kmalloc(total_size, GFP_KERNEL);
 		if (dest == NULL) {
 			printk(KERN_ERR
-			       "ram_console: failed to allocate buffer\n");
+			       "[K] ram_console: failed to allocate buffer\n");
 			return;
 		}
 	}
@@ -293,7 +293,7 @@ static int __init ram_console_init(struct ram_console_buffer *buffer,
 	 */
 	ram_console_rs_decoder = init_rs(ECC_SYMSIZE, ECC_POLY, 0, 1, ECC_SIZE);
 	if (ram_console_rs_decoder == NULL) {
-		printk(KERN_INFO "ram_console: init_rs failed\n");
+		printk(KERN_INFO "[K] ram_console: init_rs failed\n");
 		return 0;
 	}
 
@@ -305,11 +305,11 @@ static int __init ram_console_init(struct ram_console_buffer *buffer,
 
 	numerr = ram_console_decode_rs8(buffer, sizeof(*buffer), par);
 	if (numerr > 0) {
-		printk(KERN_INFO "ram_console: error in header, %d\n", numerr);
+		printk(KERN_INFO "[K] ram_console: error in header, %d\n", numerr);
 		ram_console_corrected_bytes += numerr;
 	} else if (numerr < 0) {
 		printk(KERN_INFO
-		       "ram_console: uncorrectable error in header\n");
+		       "[K] ram_console: uncorrectable error in header\n");
 		ram_console_bad_blocks++;
 	}
 #endif
@@ -317,17 +317,17 @@ static int __init ram_console_init(struct ram_console_buffer *buffer,
 	if (buffer->sig == RAM_CONSOLE_SIG) {
 		if (buffer->size > ram_console_buffer_size
 		    || buffer->start > buffer->size)
-			printk(KERN_INFO "ram_console: found existing invalid "
+			printk(KERN_INFO "[K] ram_console: found existing invalid "
 			       "buffer, size %d, start %d\n",
 			       buffer->size, buffer->start);
 		else {
-			printk(KERN_INFO "ram_console: found existing buffer, "
+			printk(KERN_INFO "[K] ram_console: found existing buffer, "
 			       "size %d, start %d\n",
 			       buffer->size, buffer->start);
 			ram_console_save_old(buffer, bootinfo, old_buf);
 		}
 	} else {
-		printk(KERN_INFO "ram_console: no valid data in buffer "
+		printk(KERN_INFO "[K] ram_console: no valid data in buffer "
 		       "(sig = 0x%08x)\n", buffer->sig);
 	}
 
@@ -363,17 +363,17 @@ static int ram_console_driver_probe(struct platform_device *pdev)
 
 	if (res == NULL || pdev->num_resources != 1 ||
 	    !(res->flags & IORESOURCE_MEM)) {
-		printk(KERN_ERR "ram_console: invalid resource, %p %d flags "
+		printk(KERN_ERR "[K] ram_console: invalid resource, %p %d flags "
 		       "%lx\n", res, pdev->num_resources, res ? res->flags : 0);
 		return -ENXIO;
 	}
 	buffer_size = res->end - res->start + 1;
 	start = res->start;
-	printk(KERN_INFO "ram_console: got buffer at %zx, size %zx\n",
+	printk(KERN_INFO "[K] ram_console: got buffer at %zx, size %zx\n",
 	       start, buffer_size);
 	buffer = ioremap(res->start, buffer_size);
 	if (buffer == NULL) {
-		printk(KERN_ERR "ram_console: failed to map memory\n");
+		printk(KERN_ERR "[K] ram_console: failed to map memory\n");
 		return -ENOMEM;
 	}
 
@@ -409,7 +409,7 @@ static void rpc_check_func(struct work_struct *work)
 	static int count = 0;
 
 	if (count++ >= 35) {
-		printk(KERN_ERR "MDM9K_ERROR_CORRECTION fail due to RPC connection is not ready\n");
+		printk(KERN_ERR "[K] MDM9K_ERROR_CORRECTION fail due to RPC connection is not ready\n");
 		return;
 	}
 
@@ -451,16 +451,16 @@ void query_error_message(struct msm_rpc_client *rpc_client, char *buf, int check
 	ret.output = NULL;
 	err = oem_rapi_client_streaming_function(rpc_client, &arg, &ret);
 	if (err) {
-		printk(KERN_ERR "ram_console: Receive data from modem failed: err = %d\n", err);
+		printk(KERN_ERR "[K] ram_console: Receive data from modem failed: err = %d\n", err);
 	} else if (!*ret.out_len) {
 		if (check_number == 0)
 			strncat(buf, "[SQA][ARM] no error occur\n", MDM9K_BUFF_SIZE);
 		else if (check_number == 1)
 			strncat(buf, "[SQA][QDSP6] no error occur\n", MDM9K_BUFF_SIZE);
-		printk(KERN_INFO "ram_console: query mdm9k message %d - out_len = 0\n", check_number);
+		printk(KERN_INFO "[K] ram_console: query mdm9k message %d - out_len = 0\n", check_number);
 		kfree(ret.out_len);
 	} else {
-		printk(KERN_INFO "ram_console: query mdm9k message %d - out_len = %d\n", check_number, *ret.out_len);
+		printk(KERN_INFO "[K] ram_console: query mdm9k message %d - out_len = %d\n", check_number, *ret.out_len);
 		if (check_number == 0)
 			strncpy(buf, ret.output, *ret.out_len);
 		else if (check_number == 1)
@@ -495,7 +495,7 @@ int get_mdm9k_error_message(char *buf)
 		return strlen(buf);
 	}
 
-	printk(KERN_INFO "ram_console: RPC client ready...\n");
+	printk(KERN_INFO "[K] ram_console: RPC client ready...\n");
 	query_error_message(rpc.rpc_client, buf, 0);
 	query_error_message(rpc.rpc_client, buf, 1);
 	oem_rapi_client_close();
@@ -512,7 +512,7 @@ static ssize_t ram_console_read_old(struct file *file, char __user *buf,
 #ifdef CONFIG_MDM9K_ERROR_CORRECTION
 	if (pos == ram_console_old_log_size) {
 		char mdm9k_buf[256];
-		printk(KERN_INFO "ram_console: MDM9K error log collection start...\n");
+		printk(KERN_INFO "[K] ram_console: MDM9K error log collection start...\n");
 		memset(mdm9k_buf, 0, 256);
 		count = get_mdm9k_error_message(mdm9k_buf);
 		if (count == 0)
@@ -521,7 +521,7 @@ static ssize_t ram_console_read_old(struct file *file, char __user *buf,
 			return -EFAULT;
 
 		*offset += count;
-		printk(KERN_INFO "ram_console: MDM9K error log collection stop...\n");
+		printk(KERN_INFO "[K] ram_console: MDM9K error log collection stop...\n");
 		return count;
 	}
 #endif
@@ -552,7 +552,7 @@ static int __init ram_console_late_init(void)
 	ram_console_old_log = kmalloc(ram_console_old_log_size, GFP_KERNEL);
 	if (ram_console_old_log == NULL) {
 		printk(KERN_ERR
-		       "ram_console: failed to allocate buffer for old log\n");
+		       "[K] ram_console: failed to allocate buffer for old log\n");
 		ram_console_old_log_size = 0;
 		return 0;
 	}
@@ -561,7 +561,7 @@ static int __init ram_console_late_init(void)
 #endif
 	entry = create_proc_entry("last_kmsg", S_IFREG | S_IRUGO, NULL);
 	if (!entry) {
-		printk(KERN_ERR "ram_console: failed to create proc entry\n");
+		printk(KERN_ERR "[K] ram_console: failed to create proc entry\n");
 		kfree(ram_console_old_log);
 		ram_console_old_log = NULL;
 		return 0;

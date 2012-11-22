@@ -1207,6 +1207,11 @@ int mmc_resume_bus(struct mmc_host *host)
 		host->bus_ops->detect(host);
 
 	mmc_bus_put(host);
+	if (ret) {
+		spin_lock_irqsave(&host->lock, flags);
+		host->bus_resume_flags |= MMC_BUSRESUME_NEEDS_RESUME;
+		spin_unlock_irqrestore(&host->lock, flags);
+	}
 	pr_info("%s: Deferred resume %s\n", mmc_hostname(host),
 		(ret == 0 ? "completed" : "Fail"));
 	return ret;

@@ -1872,6 +1872,26 @@ int get_pmem_file(unsigned int fd, unsigned long *start, unsigned long *vstart,
 }
 EXPORT_SYMBOL(get_pmem_file);
 
+void *get_pmem_virt_addr(void **phys_addr, const char *name, int length, int *size)
+{
+   int i;
+
+   for (i=0; i<id_count; i++) {
+           printk(KERN_ERR "pmem[%d] virt %p, phy %p, name %s\n",
+                   i, pmem[i].vbase, (void *)pmem[i].base, pmem[i].name);
+           if (!strncmp(pmem[i].name, name, length)) {
+				*phys_addr = (void *)pmem[i].base;
+                *size = pmem[i].size;
+				return pmem[i].vbase;
+           }
+   }
+
+   DLOG("can't find with name \"%s\"\n", name);
+
+   return 0;
+}
+EXPORT_SYMBOL(get_pmem_virt_addr);
+
 int get_pmem_fd(int fd, unsigned long *start, unsigned long *len)
 {
 	unsigned long vstart;

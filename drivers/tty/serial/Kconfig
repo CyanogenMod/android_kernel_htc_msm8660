@@ -1013,6 +1013,12 @@ config SERIAL_CORE
 config SERIAL_CORE_CONSOLE
 	bool
 
+config IMC_UART2DM_HANDSHAKE
+	bool "UART2DM handshake"
+	default n
+	help
+	  Enable UART2DM Handshaking for IMC modem
+
 config CONSOLE_POLL
 	bool
 

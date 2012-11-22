@@ -87,6 +87,9 @@
 #ifdef CONFIG_USB_ANDROID_ECM
 #include "f_ecm.c"
 #endif
+#ifdef CONFIG_USB_ETH_PASS_FW
+#include "passthru.c"
+#endif
 #include "u_ether.c"
 #ifdef CONFIG_USB_ANDROID_USBNET
 #include "f_usbnet.c"
@@ -185,6 +188,7 @@ struct android_dev {
 	void (*enable_fast_charge)(bool enable);
 	bool RndisDisableMPDecision;
 	int (*match)(int product_id, int intrsharing);
+	int autobot_mode;
 };
 
 static struct class *android_class;
@@ -310,6 +314,13 @@ static void android_work(struct work_struct *data)
 		pr_info("%s\n", dev->connected ? connected[0] : disconnected[0]);
 	} else {
 		spin_unlock_irqrestore(&cdev->lock, flags);
+
+		if (is_mtp_enabled) {
+			kobject_uevent_env(&dev->dev->kobj, KOBJ_CHANGE,
+					dev->connected ? connected : disconnected);
+
+			pr_info("%s\n", dev->connected ? connected[0] : disconnected[0]);
+		}
 	}
 
 	if (connect2pc && !dev->connected && !is_mtp_enabled) {
@@ -750,13 +761,14 @@ static int serial_function_bind_config(struct android_usb_function *f,
 {
 #if 1
 	int err = -1;
-	int i, ports;
+	int i, ports, car_mode = _android_dev->autobot_mode;
 
 	ports = serial_driver_initial(c);
 	if (ports < 0)
 		goto out;
 	for (i = 0; i < ports; i++) {
-		if (gserial_ports[i].func_type == USB_FSER_FUNC_SERIAL) {
+		if ((gserial_ports[i].func_type == USB_FSER_FUNC_SERIAL) ||
+			(car_mode && gserial_ports[i].func_type == USB_FSER_FUNC_AUTOBOT)) {
 			err = gser_bind_config(c, i);
 			if (err) {
 				pr_err("serial: bind_config failed for port %d", i);
@@ -818,7 +830,9 @@ static struct android_usb_function serial_function = {
 /* ADB */
 static int adb_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
 {
-	return adb_setup();
+	struct android_dev *dev = _android_dev;
+
+	return adb_setup(dev->pdata->adb_perf_lock_on?true:false);
 }
 
 static void adb_function_cleanup(struct android_usb_function *f)
@@ -1447,11 +1461,14 @@ static int projector_function_init(struct android_usb_function *f,
 	if (!f->config)
 		return -ENOMEM;
 
-	return projector_setup(f->config);
+	return projector_setup();
 }
 
 static void projector_function_cleanup(struct android_usb_function *f)
 {
+
+	projector_cleanup();
+
 	if (f->config) {
 		kfree(f->config);
 		f->config = NULL;
@@ -1461,14 +1478,7 @@ static void projector_function_cleanup(struct android_usb_function *f)
 static int projector_function_bind_config(struct android_usb_function *f,
 		struct usb_configuration *c)
 {
-	return projector_bind_config(c);
-}
-
-static int projector_function_ctrlrequest(struct android_usb_function *f,
-						struct usb_composite_dev *cdev,
-						const struct usb_ctrlrequest *c)
-{
-	return projector_ctrlrequest(cdev, c);
+	return projector_bind_config(c, f->config);
 }
 
 
@@ -1555,7 +1565,6 @@ struct android_usb_function projector_function = {
 	.init		= projector_function_init,
 	.cleanup	= projector_function_cleanup,
 	.bind_config	= projector_function_bind_config,
-	.ctrlrequest = projector_function_ctrlrequest,
 	.attributes = projector_function_attributes
 };
 #endif
@@ -2202,7 +2211,7 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	if (value < 0)
 		value = acc_ctrlrequest(cdev, c);
 
-#ifdef CONFIG_USB_ANDROID_PROJECTOR
+#ifdef CONFIG_USB_ANDROID_PROJECTOR_HTC_MODE
 	/*
 	 * The projector needs to handle control requests before it's enabled.
 	 */
@@ -2403,6 +2412,7 @@ static int __init init(void)
 		return -ENOMEM;
 	}
 	dev->functions = supported_functions;
+	dev->autobot_mode = 0;
 	INIT_LIST_HEAD(&dev->enabled_functions);
 	INIT_WORK(&dev->work, android_work);
 	INIT_DELAYED_WORK(&dev->init_work, android_usb_init_work);

@@ -508,7 +508,7 @@ void __handle_sysrq(int key, bool check_mask)
 	 */
 	orig_log_level = console_loglevel;
 	console_loglevel = 7;
-	printk(KERN_INFO "SysRq : ");
+	printk(KERN_INFO "[K] SysRq : ");
 
         op_p = __sysrq_get_key_op(key);
         if (op_p) {

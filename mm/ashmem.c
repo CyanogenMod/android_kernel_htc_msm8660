@@ -361,7 +361,11 @@ static int ashmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (!sc->nr_to_scan)
 		return lru_count;
 
-	mutex_lock(&ashmem_mutex);
+	/* If our mutex is held, we are recursing into ourselves, so bail out */
+	if (!mutex_trylock(&ashmem_mutex)) {
+		return -1;
+	}
+
 	list_for_each_entry_safe(range, next, &ashmem_lru_list, lru) {
 		struct inode *inode = range->asma->file->f_dentry->d_inode;
 		loff_t start = range->pgstart * PAGE_SIZE;
@@ -630,6 +634,7 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 	return ret;
 }
 
+#ifdef CONFIG_OUTER_CACHE
 static unsigned int virtaddr_to_physaddr(unsigned int virtaddr)
 {
 	unsigned int physaddr = 0;
@@ -666,63 +671,30 @@ done:
 	physaddr <<= PAGE_SHIFT;
 	return physaddr;
 }
+#endif
 
 static int ashmem_cache_op(struct ashmem_area *asma,
 	void (*cache_func)(unsigned long vstart, unsigned long length,
 				unsigned long pstart))
 {
-	int ret = 0;
-	struct vm_area_struct *vma;
+#ifdef CONFIG_OUTER_CACHE
 	unsigned long vaddr;
-
-	if (!asma->vm_start)
-		return -EINVAL;
-
-	down_read(&current->mm->mmap_sem);
-	vma = find_vma(current->mm, asma->vm_start);
-	if (!vma) {
-		ret = -EINVAL;
-		goto done;
-	}
-	if (vma->vm_file != asma->file) {
-		ret = -EINVAL;
-		goto done;
-	}
-	if ((asma->vm_start + asma->size) > (vma->vm_start + vma->vm_end)) {
-		ret = -EINVAL;
-		goto done;
-	}
+#endif
+	mutex_lock(&ashmem_mutex);
 #ifndef CONFIG_OUTER_CACHE
-	/* Check every virtual address in page unit have the mapping? */
-	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
-		vaddr += PAGE_SIZE) {
-		unsigned long physaddr;
-		physaddr = virtaddr_to_physaddr(vaddr);
-		if (!physaddr) {
-			pr_debug("ashmem_cache_op: Task(%s) try to operate unmapping VA(0x%lx)!\n", current->comm, vaddr);
-			ret = -EINVAL;
-			goto done;
-		}
-	}
 	cache_func(asma->vm_start, asma->size, 0);
 #else
 	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
 		vaddr += PAGE_SIZE) {
 		unsigned long physaddr;
 		physaddr = virtaddr_to_physaddr(vaddr);
-		if (!physaddr) {
-			pr_debug("ashmem_cache_op: Task(%s) try to operate unmapping VA(0x%lx)!\n", current->comm, vaddr);
-			ret = -EINVAL;
-			goto done;
-		}
+		if (!physaddr)
+			return -EINVAL;
 		cache_func(vaddr, PAGE_SIZE, physaddr);
 	}
 #endif
-done:
-	up_read(&current->mm->mmap_sem);
-	if (ret)
-		asma->vm_start = 0;
-	return ret;
+	mutex_unlock(&ashmem_mutex);
+	return 0;
 }
 
 static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)

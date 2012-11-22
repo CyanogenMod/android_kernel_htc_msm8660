@@ -204,6 +204,8 @@ config  ARCH_MSM_KRAITMP
 
 config  ARCH_MSM_CORTEX_A5
 	bool
+	select PERF_EVENTS if !ARCH_MSM9615
+	select HAVE_HW_BREAKPOINT if !ARCH_MSM9615
 	select HAVE_HW_BRKPT_RESERVED_RW_ACCESS
 
 config ARCH_MSM7X27A
@@ -365,6 +367,7 @@ config MACH_PRIMODD
 		depends on ARCH_MSM7X27A
 		depends on !MSM_STACKED_MEMORY
 		default n
+		select FB_MSM_MIPI_VIDEO_ONLY
 		bool "Primodd_ct"
 		help
 			Support for Primodd_ct (PDA phone).
@@ -373,6 +376,7 @@ config MACH_PRIMODS
 		depends on ARCH_MSM7X27A
 		depends on !MSM_STACKED_MEMORY
 		default n
+		select FB_MSM_MIPI_VIDEO_ONLY
 		bool "Primods"
 		help
 			Support for Primods (PDA phone).
@@ -445,6 +449,27 @@ config MACH_FLYER
        help
          Support for the Qualcomm Flyer board.
 
+config MACH_VIVO
+       depends on ARCH_MSM7X30
+       default n
+       bool "Vivo"
+       help
+         Support for the Qualcomm Vivo board.
+
+config MACH_VIVOW
+       depends on ARCH_MSM7X30
+       default n
+       bool "Vivow"
+       help
+         Support for the Qualcomm Vivow board.
+
+config MACH_VIVOW_CT
+       depends on ARCH_MSM7X30
+       default n
+       bool "Vivow_ct"
+       help
+         Support for the Qualcomm Vivow_ct board.
+
 config MACH_BLISSC
        depends on ARCH_MSM7X30
        default n
@@ -459,6 +484,27 @@ config MACH_BLISS
        help
          Support for the Qualcomm Bliss board.
 
+config MACH_SPADE
+       depends on ARCH_MSM7X30
+       default n
+       bool "Spade"
+       help
+         Support for the Qualcomm Spade board.
+
+config MACH_SAGA
+       depends on ARCH_MSM7X30
+       default n
+       bool "Saga"
+       help
+         Support for the Qualcomm Saga board.
+
+config MACH_MECHA
+       depends on ARCH_MSM7X30
+       default n
+       bool "Mecha"
+       help
+         Support for the Qualcomm Mecha board.
+
 config MACH_KINGDOM
        depends on ARCH_MSM7X30
        default n
@@ -470,6 +516,13 @@ config MACH_PRIMOU
        depends on ARCH_MSM7X30
        default n
        bool "Primou"
+       select ARCH_SPARSEMEM_ENABLE
+       select MEMORY_HOTPLUG
+       select MEMORY_HOTREMOVE
+       select ARCH_ENABLE_MEMORY_HOTPLUG
+       select ARCH_ENABLE_MEMORY_HOTREMOVE
+       select ARCH_MEMORY_PROBE
+       select ARCH_MEMORY_REMOVE
        help
          Support for the Qualcomm Primou board.
 
@@ -477,6 +530,13 @@ config MACH_PRIMOC
        depends on ARCH_MSM7X30
        default n
        bool "Primoc"
+       select ARCH_SPARSEMEM_ENABLE
+       select MEMORY_HOTPLUG
+       select MEMORY_HOTREMOVE
+       select ARCH_ENABLE_MEMORY_HOTPLUG
+       select ARCH_ENABLE_MEMORY_HOTREMOVE
+       select ARCH_MEMORY_PROBE
+       select ARCH_MEMORY_REMOVE
        help
          Support for the Qualcomm Primoc board.
 
@@ -484,8 +544,16 @@ config MACH_PRIMOTD
        depends on ARCH_MSM7X30
        default n
        bool "Primotd"
+       select DONT_MAP_HOLE_AFTER_MEMBANK0
        help
          Support for the Qualcomm Primotd board.
+
+config MACH_GOLFC
+       depends on ARCH_MSM7X30
+       default n
+       bool "Golfc"
+       help
+         Support for the Qualcomm Golfc board.
 
 config MACH_VIVOW_EVM
        depends on ARCH_MSM7X30
@@ -668,6 +736,14 @@ config MACH_RIDER
         help
           Support for the RIDER device.
 
+config MACH_VILLEC2
+        depends on ARCH_MSM8X60
+        default n
+        bool "VILLEC2"
+        select SMP_PARALLEL_START
+        help
+         Support for the VILLEC2 device.
+
 config MACH_VERDI_LTE
 	depends on ARCH_MSM8X60
 	default n
@@ -809,12 +885,32 @@ config MACH_KNIGHT
 	bool "Knight"
 	help
 	  Support for the HTC Knight
+
+config MACH_RUNNYMEDE
+	depends on ARCH_MSM7X30
+	bool "Runnymede"
+	select ARCH_SPARSEMEM_ENABLE
+	select MEMORY_HOTPLUG
+	select MEMORY_HOTREMOVE
+	select ARCH_ENABLE_MEMORY_HOTPLUG
+	select ARCH_ENABLE_MEMORY_HOTREMOVE
+	select ARCH_MEMORY_PROBE
+	select ARCH_MEMORY_REMOVE
+	help
+	  Support for the HTC Runnymede
 endmenu
 
 config MSM_MDP40
 	bool
 	depends on ARCH_MSM7X30 || ARCH_MSM8X60
 	default y
+
+config FB_MSM_MIPI_VIDEO_ONLY
+	depends on ARCH_MSM7X27A
+	default n
+	bool
+	help
+	  Use for VIDEO mode only panel
 
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"
@@ -850,6 +946,13 @@ config KERNEL_PMEM_SMI_REGION
 	depends on ANDROID_PMEM && ((ARCH_QSD8X50 && !PMEM_GPU0) || (ARCH_MSM8X60 && !VCM))
 	help
 	   Enable the in-kernel PMEM allocator to use SMI memory.
+
+config PANEL_SELF_REFRESH
+	depends on (MACH_SPADE || MACH_MECHA)
+	default n
+	bool "Panel Self-refresh"
+	help
+	    Support for the board Spade/Mecha Panel Self-refresh.
 
 config PMEM_GPU0
 	bool "Enable PMEM GPU0 region"
@@ -1359,8 +1462,8 @@ config MSM_DSPS
 
 config MSM_SDIO_CTL
 	bool "SDIO CTL Driver"
-	depends on MSM_SDIO_CMUX
-	default n
+	depends on MSM_SDIO_AL
+	default y
 	help
 	  Provides a binary SDIO control port interface.
 
@@ -1482,7 +1585,7 @@ config MSM_SDIO_SMEM
 
 config MSM_DALRPC
 	bool "DAL RPC support"
-	depends on ARCH_MSM_SCORPION || ARCH_MSM_KRAIT
+	depends on ARCH_MSM_SCORPION || ARCH_MSM_KRAIT || ARCH_MSM7X27A
 	default y
 	help
 	  Supports RPC calls to DAL devices on remote processor cores.
@@ -1581,7 +1684,15 @@ endchoice
 config MSM7KV2_AUDIO
 	bool "MSM7K v2 audio"
 	depends on (ARCH_MSM7X30 && ANDROID_PMEM)
-	default y
+	default n
+	help
+	  Enables QDSP5V2-based audio drivers for audio playbacks and
+	  voice call.
+
+config MSM7KV2_1X_AUDIO
+	bool "MSM7K 1x v2 audio"
+	depends on (ARCH_MSM7X30 && ANDROID_PMEM)
+	default n
 	help
 	  Enables QDSP5V2-based audio drivers for audio playbacks and
 	  voice call.
@@ -1614,6 +1725,18 @@ config MSM8X60_FTM_AUDIO_DEVICES
 	help
 	  Enable support audio factory test mode devices.  This is used
 	  in a production line environment.
+
+config HTC_OFFMODE_ALARM
+	bool "Enables HTC offmode alarm."
+	default n
+	help
+	support HTC offmode alarm.
+
+config HTC_QUICKBOOT_OFFMODE_ALARM
+	bool "Support HTC quickboot offmode alarm."
+	default n
+	help
+	support HTC quickboot offmode alarm.
 
 config RTAC
 	bool "MSM8K real-time audio calibration support"
@@ -1709,10 +1832,10 @@ config MSM_SLEEP_TIME_OVERRIDE
 	  testing.
 
 config HTC_OFFMODE_ALARM
-       bool "Enables HTC offmode alarm."
-       default n
-       help
-               support HTC offmode alarm.
+	bool "Enables HTC offmode alarm."
+	default n
+	help
+		support HTC offmode alarm.
 
 config HTC_QUICKBOOT_OFFMODE_ALARM
         bool "Support HTC quickboot offmode alarm."
@@ -1787,6 +1910,12 @@ config MSM_IDLE_WAIT_ON_MODEM
 	  If Modem is not ready to handle Application Processor's request
 	  for idle power collapse, wait the number of microseconds in case
 	  Modem becomes ready soon.
+
+config MICROP_COMMON
+	tristate "MICROP COMMON Driver"
+	depends on I2C
+	help
+	  HTC Microp-P support.
 
 config HTC_HEADSET_MGR
 	tristate "HTC headset manager driver"
@@ -2149,6 +2278,14 @@ config MSM_AUDIO_QDSP6
           Enable HW audio support in QDSP6.
           QDSP6 can support HW encoder & decoder and audio processing
 
+config RPC_VIBRATOR
+        bool "RPC based MSM Vibrator Support"
+        depends on MSM_ONCRPCROUTER
+        help
+          Enable the vibrator support on MSM over RPC. The vibrator
+          is connected on the PMIC. Say Y if you want to enable this
+          feature.
+
 config MSM_RPC_VIBRATOR
 	bool "RPC based MSM Vibrator Support"
 	depends on MSM_ONCRPCROUTER
@@ -2156,6 +2293,13 @@ config MSM_RPC_VIBRATOR
 	  Enable the vibrator support on MSM over RPC. The vibrator
 	  is connected on the PMIC. Say Y if you want to enable this
 	  feature.
+config RPC_VER_60001
+	bool "rpc ver 60001"
+	depends on MSM_ONCRPCROUTER
+        help
+          Enable the vibrator support on MSM over RPC. The vibrator
+          is connected on the PMIC. Say Y if you want to enable this
+          feature.
 
 config PM8XXX_RPC_VIBRATOR
 	bool "RPC based Vibrator on PM8xxx PMICs"
@@ -2246,4 +2390,9 @@ config REMOVE_EBI1_FIXED_CLK
 	help
 		use for 2x Radio
 
+config HTC_ACCESSORY_ONEWIRE
+        tristate "HTC accessory one wire protocol driver"
+        default n
+        help
+          Provides support of HTC one wire protocol driver.
 endif

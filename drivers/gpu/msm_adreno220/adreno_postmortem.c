@@ -12,7 +12,6 @@
  */
 
 #include <linux/vmalloc.h>
-#include <linux/delay.h>
 
 #include "kgsl.h"
 
@@ -945,11 +944,6 @@ int adreno_postmortem_dump(struct kgsl_device *device, int manual)
 	}
 
 	KGSL_DRV_ERR(device, "Dump Finished\n");
-
-	hr_msleep(5000);
-	/* aleays bug on */
-	BUG_ON(true);
-
 
 	return 0;
 }

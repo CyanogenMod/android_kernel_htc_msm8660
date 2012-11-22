@@ -1329,13 +1329,14 @@ void mdp_color_enhancement(const struct mdp_reg *reg_seq, int size)
 	int i;
 
 	printk(KERN_INFO "%s\n", __func__);
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	for (i = 0; i < size; i++) {
 		if (reg_seq[i].mask == 0x0)
 			outpdw(MDP_BASE + reg_seq[i].reg, reg_seq[i].val);
 		else
 			mdp_write_reg_mask(reg_seq[i].reg, reg_seq[i].val, reg_seq[i].mask);
 	}
-
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	return ;
 }
 

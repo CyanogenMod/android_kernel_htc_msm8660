@@ -101,6 +101,10 @@ struct t_usb_status_notifier{
 /* END: add USB connected notify function */
 #endif
 
+#ifdef CONFIG_RESET_BY_CABLE_IN
+void reset_dflipflop(void);
+#endif
+
 int __init board_mfg_mode(void);
 int __init parse_tag_smi(const struct tag *tags);
 int __init parse_tag_hwid(const struct tag * tags);

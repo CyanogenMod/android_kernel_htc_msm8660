@@ -88,8 +88,3 @@ config EXT4_E2FSCK_RECOVER
 	bool "EXT4 e2fsck recovery support"
 	depends on EXT4_FS
 	default n
-
-config EXT4_WORKAROUND
-	bool "workaround for EXT4 issue"
-	depends on EXT4_FS
-	default n

@@ -221,6 +221,14 @@ config TOUCHSCREEN_CYPRESS_CS
 	  Say Y here if you have cap sensor on your device
 	  If unsure, say N.
 
+config TOUCH_KEY_FILTER
+	tristate "Virtualkey and TouchScreen Filter"
+	depends on TOUCHSCREEN_CYPRESS_CS
+	default n
+	help
+		say y here if you need to avoid some unintend touch & key
+		if unsure, say N
+
 config TOUCHSCREEN_DYNAPRO
 	tristate "Dynapro serial touchscreen"
 	select SERIO
@@ -303,6 +311,11 @@ config TOUCHSCREEN_ELO
 	  To compile this driver as a module, choose M here: the
 	  module will be called elo.
 
+config TOUCHSCREEN_ELAN_KTF2K
+	tristate "Elan KTF2000 I2C touchscreen"
+	depends on I2C
+	help
+	  This enables support for Elan KTF2000 over I2C based touchscreens.
 config TOUCHSCREEN_WACOM_W8001
 	tristate "Wacom W8001 penabled serial touchscreen"
 	select SERIO
@@ -477,6 +490,12 @@ config TOUCHSCREEN_SYNAPTICS_I2C_RMI
 
 config TOUCHSCREEN_SYNAPTICS_3K
         tristate "Synaptics 3k serious i2c touchscreen"
+        depends on I2C
+        help
+          This enables support for Synaptics RMI4 over I2C based touchscreens.
+
+config TOUCHSCREEN_SYNAPTICS_3000
+        tristate "Synaptics 3000 serious i2c touchscreen"
         depends on I2C
         help
           This enables support for Synaptics RMI4 over I2C based touchscreens.

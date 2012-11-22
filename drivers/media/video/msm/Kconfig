@@ -107,7 +107,7 @@ config WEBCAM_OV9726
 #	This uses the CSI interface.
 config VX6953
 	bool "Sensor VX6953 (BAYER 5M)"
-	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60)
+	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60) && !MSM_CAMERA_V4L2
 	default y
 	---help---
 	STM 5M Bayer Sensor with EDOF
@@ -185,6 +185,13 @@ config S5K4E1
 	  It is a Bayer 5MP sensor with auto focus and it supports
 	  two mipi lanes, required for msm7x2xA platform.
 	  Say Y here if this is msm7x2xA variant platform.
+
+config S5K4E1GX
+	bool "Sensor s5k4e1gx (Samsung 5M)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Samsung 5M with Autofocus
 
 config S5K4E5YX
         bool "Sensor s5k4e5yx (Samsung 5M)"
@@ -334,6 +341,13 @@ config S5K6AAFX
 	default n
 	---help---
 	  Samsung 1.3M without Autofocus
+
+config OV8810
+	bool "Sensor ov8810"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  OmniVision 8M Bayer Sensor
 
 config OV8830
 	bool "Sensor ov8830"

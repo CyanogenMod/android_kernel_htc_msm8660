@@ -268,8 +268,6 @@ static long download_firmware(struct kim_data_s *kim_gdata)
 	int wr_room_space;
 	int cmd_size;
 	unsigned long timeout;
-	struct st_data_s *core_data;
-	core_data = kim_gdata->core_data;
 
 	err = read_local_version(kim_gdata, bts_scr_name);
 	if (err != 0) {
@@ -311,7 +309,6 @@ static long download_firmware(struct kim_data_s *kim_gdata)
 				skip_change_remote_baud(&ptr, &len);
 				break;
 			}
-
 			/*
 			 * Make sure we have enough free space in uart
 			 * tx buffer to write current firmware command
@@ -389,13 +386,6 @@ static long download_firmware(struct kim_data_s *kim_gdata)
 	}
 	/* fw download complete */
 	release_firmware(kim_gdata->fw_entry);
-
-	pr_info("[BT]Download firmware completed");
-	/* If the firmware wasn't parsed completely, warn user about remaining commands
-	 * in firmware, so that the firmware can be relooked at
-	 */
-	if (len != 0)
-		pr_warn("%s:incomplete, script not parsed completely", __func__);
 	return 0;
 }
 
@@ -447,14 +437,13 @@ long st_kim_start(void *kim_data)
 	struct kim_data_s	*kim_gdata = (struct kim_data_s *)kim_data;
 
 	pr_info(" %s", __func__);
-	if (kim_gdata->bluetooth_set_power == NULL)
-		return -1;
-	do {
-		pr_info("st_kim_start");
-		/* Configure BT nShutdown to HIGH state */
-		kim_gdata->bluetooth_set_power(1);
 
-		mdelay(300);
+	do {
+		/* Configure BT nShutdown to HIGH state */
+		gpio_set_value(kim_gdata->nshutdown, GPIO_LOW);
+		mdelay(5);	/* FIXME: a proper toggle */
+		gpio_set_value(kim_gdata->nshutdown, GPIO_HIGH);
+		mdelay(100);
 		/* re-initialize the completion */
 		INIT_COMPLETION(kim_gdata->ldisc_installed);
 		/* send notification to UIM */
@@ -500,6 +489,7 @@ long st_kim_stop(void *kim_data)
 {
 	long err = 0;
 	struct kim_data_s	*kim_gdata = (struct kim_data_s *)kim_data;
+
 	INIT_COMPLETION(kim_gdata->ldisc_installed);
 
 	/* Flush any pending characters in the driver and discipline. */
@@ -520,7 +510,11 @@ long st_kim_stop(void *kim_data)
 	}
 
 	/* By default configure BT nShutdown to LOW state */
-	kim_gdata->bluetooth_set_power(0);
+	gpio_set_value(kim_gdata->nshutdown, GPIO_LOW);
+	mdelay(1);
+	gpio_set_value(kim_gdata->nshutdown, GPIO_HIGH);
+	mdelay(1);
+	gpio_set_value(kim_gdata->nshutdown, GPIO_LOW);
 	return err;
 }
 
@@ -610,6 +604,10 @@ void st_kim_ref(struct st_data_s **core_data, int id)
 	struct kim_data_s	*kim_gdata;
 	/* get kim_gdata reference from platform device */
 	pdev = st_get_plat_device(id);
+	if (!pdev) {
+		*core_data = NULL;
+		return;
+	}
 	kim_gdata = dev_get_drvdata(&pdev->dev);
 	*core_data = kim_gdata->core_data;
 }
@@ -665,7 +663,6 @@ static int kim_probe(struct platform_device *pdev)
 		pr_err("no mem to allocate");
 		return -ENOMEM;
 	}
-	kim_gdata->bluetooth_set_power = pdata->bluetooth_set_power;
 	dev_set_drvdata(&pdev->dev, kim_gdata);
 
 	status = st_core_init(&kim_gdata->core_data);
@@ -676,6 +673,20 @@ static int kim_probe(struct platform_device *pdev)
 	/* refer to itself */
 	kim_gdata->core_data->kim_data = kim_gdata;
 
+	/* Claim the chip enable nShutdown gpio from the system */
+	kim_gdata->nshutdown = pdata->nshutdown_gpio;
+	status = gpio_request(kim_gdata->nshutdown, "kim");
+	if (unlikely(status)) {
+		pr_err(" gpio %ld request failed ", kim_gdata->nshutdown);
+		return status;
+	}
+
+	/* Configure nShutdown GPIO as output=0 */
+	status = gpio_direction_output(kim_gdata->nshutdown, 0);
+	if (unlikely(status)) {
+		pr_err(" unable to configure gpio %ld", kim_gdata->nshutdown);
+		return status;
+	}
 	/* get reference of pdev for request_firmware
 	 */
 	kim_gdata->kim_pdev = pdev;

@@ -607,10 +607,10 @@ static void dpm_drv_timeout(unsigned long data)
 	struct device *dev = wd_data->dev;
 	struct task_struct *tsk = wd_data->tsk;
 
-	printk(KERN_EMERG "**** DPM device timeout: %s (%s)\n", dev_name(dev),
+	printk(KERN_EMERG "[K] **** DPM device timeout: %s (%s)\n", dev_name(dev),
 	       (dev->driver ? dev->driver->name : "no driver"));
 
-	printk(KERN_EMERG "dpm suspend stack:\n");
+	printk(KERN_EMERG "[K] dpm suspend stack:\n");
 	show_stack(tsk, NULL);
 
 	BUG();

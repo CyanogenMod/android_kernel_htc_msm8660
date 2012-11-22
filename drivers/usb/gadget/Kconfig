@@ -1027,6 +1027,13 @@ config USB_ANDROID_RNDIS
 	help
 	  Provides RNDIS ethernet function for android gadget driver.
 
+config USB_ETH_PASS_FW
+	boolean "Support internet pass through over firewall"
+	depends on USB_ANDROID_RNDIS
+	default n
+	help
+	  Support internet pass through over firewall.
+
 config USB_ANDROID_RMNET
 	boolean "RmNet function driver"
 	depends on USB_G_ANDROID
@@ -1159,6 +1166,11 @@ config USB_ANDROID_SERIAL
 config USB_ANDROID_PROJECTOR
 	boolean "Android gadget Projector function"
 	depends on USB_G_ANDROID
+	help
+
+config USB_ANDROID_PROJECTOR_HTC_MODE
+	boolean "Android gadget Projector HTC MODE function"
+	depends on USB_ANDROID_PROJECTOR
 	help
 
 config USB_ANDROID_ECM
@@ -1327,6 +1339,12 @@ config USB_CSW_HACK
 	help
 	 This csw hack feature is for increasing the performance of the mass
 	 storage
+
+config USB_MSC_PROFILING
+	bool "USB MSC performance profiling"
+	help
+	  If you say Y here, support will be added for collecting
+	  Mass-storage performance numbers at the VFS level.
 
 config MODEM_SUPPORT
 	boolean "modem support in generic serial function driver"

@@ -14,6 +14,7 @@
 #include <linux/vmalloc.h>
 #include <linux/ioctl.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 
 #include <mach/socinfo.h>
 
@@ -717,6 +718,13 @@ adreno_dump_and_recover(struct kgsl_device *device)
 		else
 			kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
 		complete_all(&device->recovery_gate);
+
+		/* HTC: Always trigger system panic for GPU Hang problem */
+		hr_msleep(5000);
+		if (result)
+			panic("GPU Hang");
+		else
+			panic("Recoverable GPU Hang");
 	}
 done:
 	return result;

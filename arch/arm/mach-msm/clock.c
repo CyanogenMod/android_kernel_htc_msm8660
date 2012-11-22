@@ -300,7 +300,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	else
 		rc = _clk_set_rate(clk, rate, clk->ops->set_rate);
 	if (rc)
-		printk(KERN_ERR "[CLK] %s: failed to set clk: %s, rate=%lu, flags=0x%x, rc=%d\n",
+		printk(KERN_ERR "[K][CLK] %s: failed to set clk: %s, rate=%lu, flags=0x%x, rc=%d\n",
 			__func__, clk->dbg_name, rate, clk->flags, rc);
 	return rc;
 }
@@ -311,7 +311,7 @@ int clk_set_min_rate(struct clk *clk, unsigned long rate)
 	int rc;
 	rc = _clk_set_rate(clk, rate, clk->ops->set_min_rate);
 	if (rc)
-		printk(KERN_ERR "[CLK] %s: failed to set clk: %s, rate=%lu, rc=%d\n",
+		printk(KERN_ERR "[K][CLK] %s: failed to set clk: %s, rate=%lu, rc=%d\n",
 			__func__, clk->dbg_name, rate, rc);
 	return rc;
 }

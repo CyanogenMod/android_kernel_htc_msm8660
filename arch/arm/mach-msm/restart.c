@@ -194,7 +194,7 @@ static void msm_pm_flush_console(void)
 	console_flushed = true;
 
 	printk("\n");
-	printk(KERN_EMERG "Restarting %s\n", linux_banner);
+	printk(KERN_EMERG "[K] Restarting %s\n", linux_banner);
 	if (!console_trylock()) {
 		console_unlock();
 		return;
@@ -204,9 +204,9 @@ static void msm_pm_flush_console(void)
 
 	local_irq_disable();
 	if (console_trylock())
-		printk(KERN_EMERG "restart: Console was locked! Busting\n");
+		printk(KERN_EMERG "[K] restart: Console was locked! Busting\n");
 	else
-		printk(KERN_EMERG "restart: Console was locked!\n");
+		printk(KERN_EMERG "[K] restart: Console was locked!\n");
 	console_unlock();
 }
 
@@ -225,7 +225,7 @@ void notify_modem_efs_sync(unsigned timeout)
 {
 #if defined(CONFIG_ARCH_MSM8960)
 	smsm_change_state(SMSM_APPS_STATE, SMSM_APPS_REBOOT, SMSM_APPS_REBOOT);
-	printk(KERN_INFO "%s: wait for modem efs_sync\n", __func__);
+	printk(KERN_INFO "[K] %s: wait for modem efs_sync\n", __func__);
 	while (timeout > 0 && !(smsm_get_state(SMSM_MODEM_STATE) & SMSM_SYSTEM_PWRDWN_USR)) {
 		/* Kick watchdog.
 		   Do not assume efs sync will be executed.
@@ -235,11 +235,11 @@ void notify_modem_efs_sync(unsigned timeout)
 		timeout--;
 	}
 	if (timeout <= 0)
-		printk(KERN_NOTICE "%s: modem efs_sync timeout.\n", __func__);
+		printk(KERN_NOTICE "[K] %s: modem efs_sync timeout.\n", __func__);
 #else
 #if defined(CONFIG_MSM_RMT_STORAGE_CLIENT)
 
-	printk(KERN_INFO "from %s\r\n", __func__);
+	printk(KERN_INFO "[K] from %s\r\n", __func__);
 	/* efs sync timeout is 10 seconds.
 	   set watchdog to 12 seconds. */
 	writel(1, msm_tmr0_base + WDT0_RST);
@@ -252,7 +252,7 @@ void notify_modem_efs_sync(unsigned timeout)
 	wait_rmt_final_call_back(timeout);
 	/* Rest watchdog timer to make sure we have enough time to power off */
 	writel(1, msm_tmr0_base + WDT0_RST);
-	printk(KERN_INFO "back %s\r\n", __func__);
+	printk(KERN_INFO "[K] back %s\r\n", __func__);
 
 #endif /* CONFIG_MSM_RMT_STORAGE_CLIENT */
 #endif /* CONFIG_ARCH_MSM8960 */
@@ -266,7 +266,7 @@ static void __msm_power_off(int lower_pshold)
 	/* final efs_sync */
 	notify_modem_efs_sync(10);
 #endif
-	printk(KERN_CRIT "Powering off the SoC\n");
+	printk(KERN_CRIT "[K] Powering off the SoC\n");
 #ifdef CONFIG_MSM_DLOAD_MODE
 	set_dload_mode(0);
 #endif
@@ -278,7 +278,7 @@ static void __msm_power_off(int lower_pshold)
 	if (lower_pshold) {
 		__raw_writel(0, PSHOLD_CTL_SU);
 		mdelay(10000);
-		printk(KERN_ERR "Powering off has failed\n");
+		printk(KERN_ERR "[K] Powering off has failed\n");
 	}
 	return;
 }
@@ -319,7 +319,7 @@ static void cpu_power_off(void *data)
 
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
-	pr_warn("%s PMIC Initiated shutdown\n", __func__);
+	pr_warn("[K] %s PMIC Initiated shutdown\n", __func__);
 	oops_in_progress = 1;
 	smp_call_function_many(cpu_online_mask, cpu_power_off, NULL, 0);
 	if (smp_processor_id() == 0)
@@ -358,16 +358,16 @@ void arch_reset(char mode, const char *cmd)
 		set_dload_mode(0);
 #endif
 
-	printk(KERN_NOTICE "Going down for restart now\n");
-	printk(KERN_NOTICE "%s: mode %d\n", __func__, mode);
+	printk(KERN_NOTICE "[K] Going down for restart now\n");
+	printk(KERN_NOTICE "[K] %s: mode %d\n", __func__, mode);
 	if (cmd) {
-		printk(KERN_NOTICE "%s: restart command `%s'.\n", __func__, cmd);
+		printk(KERN_NOTICE "[K] %s: restart command `%s'.\n", __func__, cmd);
 		/* XXX: modem will set msg itself.
 			Dying msg should be passed to this function directly. */
 		if (mode != RESTART_MODE_MODEM_CRASH)
 			set_restart_msg(cmd);
 	} else
-		printk(KERN_NOTICE "%s: no command restart.\n", __func__);
+		printk(KERN_NOTICE "[K] %s: no command restart.\n", __func__);
 
 #ifdef CONFIG_ARCH_MSM8960
 	if (pm8xxx_reset_pwr_off(1)) {
@@ -423,7 +423,7 @@ void arch_reset(char mode, const char *cmd)
 		mode != RESTART_MODE_ERASE_EFS
 		) {
 		/* final efs_sync */
-		printk(KERN_INFO "from %s\r\n", __func__);
+		printk(KERN_INFO "[K] from %s\r\n", __func__);
 
 		/* efs sync timeout is 10 seconds.
 		   set watchdog to 12 seconds. */
@@ -442,7 +442,7 @@ void arch_reset(char mode, const char *cmd)
 		} else {
 			wait_rmt_final_call_back(10);
 		}
-		printk(KERN_INFO "back %s\r\n", __func__);
+		printk(KERN_INFO "[K] back %s\r\n", __func__);
 	}
 #endif
 
@@ -465,7 +465,7 @@ void arch_reset(char mode, const char *cmd)
 		kenrel needs waiting modem flushing caches at most 10 seconds. 	*/
 	if (in_panic || get_restart_reason() == RESTART_REASON_RIL_FATAL || (mode == RESTART_MODE_MDM_DOG_BITE) || (mode == RESTART_MODE_MDM_FATAL)) {
 		int timeout = 10;
-		printk(KERN_INFO "%s: wait for modem flushing caches.\n", __func__);
+		printk(KERN_INFO "[K] %s: wait for modem flushing caches.\n", __func__);
 		while (timeout > 0 && !modem_cache_flush_done) {
 			/* Kick watchdog.
 			   Do not assume efs sync will be executed.
@@ -476,7 +476,7 @@ void arch_reset(char mode, const char *cmd)
 			timeout--;
 		}
 		if (timeout <= 0)
-			printk(KERN_NOTICE "%s: modem flushes cache timeout.\n", __func__);
+			printk(KERN_NOTICE "[K] %s: modem flushes cache timeout.\n", __func__);
 	}
 
 #if defined(CONFIG_ARCH_MSM8X60_LTE)
@@ -492,7 +492,7 @@ void arch_reset(char mode, const char *cmd)
 		mb();
 		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
 		mdelay(5000);
-		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
+		pr_notice("[K] PS_HOLD didn't work, falling back to watchdog\n");
 	}
 
 	__raw_writel(1, msm_tmr0_base + WDT0_RST);
@@ -501,7 +501,7 @@ void arch_reset(char mode, const char *cmd)
 	__raw_writel(1, msm_tmr0_base + WDT0_EN);
 
 	mdelay(10000);
-	printk(KERN_ERR "Restarting has failed\n");
+	printk(KERN_ERR "[K] Restarting has failed\n");
 }
 
 

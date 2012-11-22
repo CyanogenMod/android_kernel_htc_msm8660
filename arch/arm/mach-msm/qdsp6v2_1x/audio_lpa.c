@@ -192,7 +192,7 @@ static int audlpa_async_flush(struct audio *audio)
 	union msm_audio_event_payload payload;
 	int rc = 0;
 
-	pr_aud_info("%s:out_enabled = %d, drv_status = 0x%x\n", __func__,
+	pr_aud_info("%s: ++ out_enabled = %d, drv_status = 0x%x\n", __func__,
 			audio->out_enabled, audio->drv_status);
 	if (audio->out_enabled) {
 		list_for_each_safe(ptr, next, &audio->out_queue) {
@@ -233,6 +233,7 @@ static int audlpa_async_flush(struct audio *audio)
 		}
 		wake_up(&audio->write_wait);
 	}
+	pr_aud_info("%s --\n", __func__);
 	return rc;
 }
 
@@ -261,7 +262,7 @@ static int audlpa_pause(struct audio *audio)
 {
 	int rc = 0;
 
-	pr_aud_info("%s, enabled = %d\n", __func__,
+	pr_aud_info("%s ++, enabled = %d\n", __func__,
 			audio->out_enabled);
 	if (audio->out_enabled) {
 		q6asm_set_volume(audio->ac, audio->volume/2);
@@ -278,6 +279,8 @@ static int audlpa_pause(struct audio *audio)
 
 	} else
 		pr_aud_err("%s: Driver not enabled\n", __func__);
+	pr_aud_info("%s --, enabled = %d\n", __func__,
+			audio->out_enabled);
 	return rc;
 }
 
@@ -717,12 +720,12 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	uint64_t timestamp = 0;
 	uint64_t temp;
 
-	pr_debug("%s: audio_ioctl() cmd = %d\n", __func__, cmd);
+	pr_debug("%s: audio_ioctl() ++ cmd = 0x%x\n", __func__, cmd);
 
 	if (cmd == AUDIO_GET_STATS) {
 		struct msm_audio_stats stats;
 
-		pr_aud_info("%s: audio_get_stats command\n", __func__);
+		pr_aud_info("%s: audio_get_stats command ++\n", __func__);
 		memset(&stats, 0, sizeof(stats));
 		timestamp = q6asm_get_session_time(audio->ac);
 		/* never happen
@@ -741,8 +744,11 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		pr_debug("%s: bytes_consumed:lsb = %d, msb = %d,"
 			"timestamp = %lld\n", __func__,
 			audio->bytes_consumed, stats.unused[0], timestamp);
-		if (copy_to_user((void *) arg, &stats, sizeof(stats)))
+		if (copy_to_user((void *) arg, &stats, sizeof(stats))) {
+				pr_debug("%s(%d): copy_to_user return --\n", __func__, __LINE__);
 				return -EFAULT;
+		}
+		pr_debug("%s: audio_get_stats command --\n", __func__);
 		return 0;
 	}
 
@@ -761,19 +767,23 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 
 	if (cmd == AUDIO_GET_EVENT) {
-		pr_debug("%s: AUDIO_GET_EVENT\n", __func__);
+		pr_debug("%s: AUDIO_GET_EVENT ++\n", __func__);
 		if (mutex_trylock(&audio->get_event_lock)) {
 			rc = audlpa_process_event_req(audio,
 				(void __user *) arg);
 			mutex_unlock(&audio->get_event_lock);
-		} else
+		} else {
 			rc = -EBUSY;
+			pr_debug("%s: AUDIO_GET_EVENT, rc = EBUSY\n", __func__);
+		}
+		pr_debug("%s: AUDIO_GET_EVENT --\n", __func__);
 		return rc;
 	}
 
 	if (cmd == AUDIO_ABORT_GET_EVENT) {
 		audio->event_abort = 1;
 		wake_up(&audio->event_wait);
+		pr_debug("%s: audio_ioctl() -- cmd = %d\n", __func__, cmd);
 		return 0;
 	}
 
@@ -1062,6 +1072,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 fail:
 	mutex_unlock(&audio->lock);
+	pr_debug("%s: audio_ioctl() -- cmd = 0x%x\n", __func__, cmd);
 	return rc;
 }
 
@@ -1414,11 +1425,17 @@ static int audio_open(struct inode *inode, struct file *file)
 	audio->device_events = AUDDEV_EVT_STREAM_VOL_CHG | AUDDEV_EVT_DEV_RDY;
 	audio->drv_status &= ~ADRV_STATUS_PAUSE;
 
+	pr_debug("%s: auddev_register_evt_listner[%d] ++\n",
+						__func__,
+						audio->ac->session);
 	rc = auddev_register_evt_listner(audio->device_events,
 					AUDDEV_CLNT_DEC,
 					audio->ac->session,
 					lpa_listner,
 					(void *)audio);
+	pr_debug("%s: auddev_register_evt_listner[%d] --\n",
+						__func__,
+						audio->ac->session);
 	if (rc) {
 		pr_aud_err("%s: failed to register listner\n", __func__);
 		goto err;
@@ -1438,6 +1455,7 @@ static int audio_open(struct inode *inode, struct file *file)
 	audio->suspend_ctl.node.suspend = audlpa_suspend;
 	audio->suspend_ctl.audio = audio;
 	register_early_suspend(&audio->suspend_ctl.node);
+	pr_aud_info("%s(%d) \n", __func__, __LINE__);
 #endif
 	for (i = 0; i < AUDLPA_EVENT_NUM; i++) {
 		e_node = kmalloc(sizeof(struct audlpa_event), GFP_KERNEL);

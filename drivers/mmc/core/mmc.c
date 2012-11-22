@@ -546,7 +546,11 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	unsigned int max_dtr;
 	u32 rocr;
 	u8 *ext_csd = NULL;
-
+#if defined(CONFIG_MMC_DISABLE_WP_RFG_5)
+	/* 2012 March detect write protection status for SHR/SHR#K workaround */
+	/* mfg partition start sector = LBA 65536                             */
+	unsigned char WP_STATUS[8] = {0};
+#endif
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
@@ -875,6 +879,48 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			mmc_set_bus_width(card->host, bus_width);
 		}
 	}
+
+#if defined(CONFIG_MMC_DISABLE_WP_RFG_5)
+	/* 2012 March detect write protection status for SHR/SHR#K workaround */
+	/* mfg partition start sector = LBA 65536                             */
+	err = mmc_set_block_length(card, 8);
+
+	if (err && err != -EBADMSG)
+		goto free_card;
+
+	if (err) {
+		pr_err("%s: set block length to 8 fail\n", mmc_hostname(card->host));
+		err = 0;
+	}
+
+	err = mmc_send_write_prot_type(card, WP_STATUS, 65536);
+
+	if (err && err != -EBADMSG)
+		goto free_card;
+
+	if (err) {
+		pr_err("%s: send write protection type at address 65536 failed\n", mmc_hostname(card->host));
+		err = 0;
+	}
+
+	if (WP_STATUS[0] & 0xAA) {
+		pr_info("%s: trigger software write protection\n", mmc_hostname(card->host));
+		card->write_prot_type = 1;
+	} else {
+		pr_info("%s: disable software write protection\n", mmc_hostname(card->host));
+		card->write_prot_type = 0;
+	}
+
+	err = mmc_set_block_length(card, 512);
+
+	if (err && err != -EBADMSG)
+		goto free_card;
+
+	if (err) {
+		pr_err("%s: set block length to 512 fail\n", mmc_hostname(card->host));
+		err = 0;
+	}
+#endif
 
 	if (!oldcard)
 		host->card = card;

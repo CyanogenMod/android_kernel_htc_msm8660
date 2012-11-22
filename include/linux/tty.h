@@ -335,6 +335,11 @@ struct tty_struct {
 	/* If the tty has a pending do_SAK, queue it here - akpm */
 	struct work_struct SAK_work;
 	struct tty_port *port;
+	/* spinklock for changing receive_room */
+	spinlock_t rcv_lock;
+	int is_rcvlock;
+	struct mutex rcv_room_lock;
+
 };
 
 /* Each of a tty's open files has private_data pointing to tty_file_private */
