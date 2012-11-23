@@ -330,7 +330,7 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-inline void soc_restart(char mode, const char *cmd)
+void soc_restart(char mode, const char *cmd)
 {
 	arm_pm_restart(mode, cmd);
 }
