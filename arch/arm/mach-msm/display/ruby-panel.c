@@ -35,7 +35,7 @@
 #include "../devices.h"
 #include "../board-ruby.h"
 #include "../devices-msm8x60.h"
-#include "../../../../drivers/video/msm_8x60/mdp_hw.h"
+#include "../../../../drivers/video/msm/mdp_hw.h"
 
 void mdp_color_enhancement(const struct mdp_reg *reg_seq, int size);
 

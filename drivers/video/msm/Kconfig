@@ -1,4 +1,5 @@
 source "drivers/video/msm/sii9234/Kconfig"
+source "drivers/video/msm/vidc/Kconfig"
 
 config FB_MSM
 	tristate "MSM Framebuffer support"
@@ -9,6 +10,7 @@ config FB_MSM
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
+	default y
 	---help---
 	  Support for MSM Framebuffer.
 
@@ -25,6 +27,16 @@ config FB_MSM_LOGO
 	default n
 	---help---
 	  Show /initlogo.rle during boot.
+
+config FB_MSM_LEGACY_MDP
+	bool
+	depends on FB_MSM && (MSM_MDP30 || MSM_MDP31 || MSM_MDP302)
+	default y
+
+config FB_MSM_MDP_PPP
+	bool
+	depends on FB_MSM_LEGACY_MDP
+	default y
 
 config FB_MSM_LCDC_HW
 	bool
@@ -89,13 +101,14 @@ config FB_MSM_MIPI_DSI
 	default n
 
 config FB_MSM_LCDC
-	bool
+	bool "Support for integrated LCD controller in qsd8x50 ,MSM7x27 ,MSM7x30 and MSM8x60"
+	depends on FB_MSM && (MSM_MDP31 || MSM_MDP302 || MSM_MDP40)
 	default n
 
 config FB_MSM_OVERLAY
-	depends on FB_MSM_MDP40 && ANDROID_PMEM
 	bool "MDP4 overlay support"
-	default n
+	depends on FB_MSM && FB_MSM_MDP40
+	default y
 
 config FB_MSM_DTV
 	depends on FB_MSM_OVERLAY
@@ -103,21 +116,23 @@ config FB_MSM_DTV
 	default n
 
 config FB_MSM_MDP_ABL
-        bool "CABL Service"
-        depends on FB_MSM
-        default n
+	bool "Support QCT auto backlight scaling"
+	depends on FB_MSM && MSM_MDP40
+	default n
 
 config MSM_AUTOBL_ENABLE
-        bool "ACL Service"
-        depends on FB_MSM
-        default n
+	bool "ACL Service"
+	depends on FB_MSM
+	default n
 
 config FB_MSM_EXTMDDI
 	bool
 	default n
 
 config FB_MSM_TVOUT
-	bool
+	bool "Support for TV-Out in qsd8x50"
+	depends on FB_MSM && (MSM_MDP31 || MSM_MDP40)
+	select FB_MSM_EXT_INTERFACE_COMMON
 	default n
 
 config FB_MSM_MDDI_TOSHIBA_COMMON
@@ -171,9 +186,19 @@ config FB_MSM_MIPI_DSI_SIMULATOR
 	default n
 
 config FB_MSM_MIPI_DSI_NOVATEK
-        bool
-        select FB_MSM_MIPI_DSI
-        default n
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_DSI_HIMAX
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_DSI_ORISE
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
 
 config FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
 	bool
@@ -186,16 +211,16 @@ config FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
 	  using a dual LVDS link.
 
 config FB_MSM_LCDC_ST15_WXGA
-    bool
-    select FB_MSM_LCDC_PANEL
-    default n
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
 
 config FB_MSM_LCDC_ST15_PANEL
-    depends on FB_MSM_LCDC_HW
-    bool "LCDC ST1.5 Panel"
-    select FB_MSM_LCDC_ST15_WXGA
-    ---help---
-      Support for ST1.5 WXGA (1366x768) panel
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC ST1.5 Panel"
+	select FB_MSM_LCDC_ST15_WXGA
+	---help---
+	  Support for ST1.5 WXGA (1366x768) panel
 
 config FB_MSM_LCDC_PRISM_WVGA
 	bool
@@ -237,6 +262,11 @@ config FB_MSM_LCDC_AUO_WVGA
 	select FB_MSM_LCDC_PANEL
 	default n
 
+config FB_MSM_LCDC_AUO_WXGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default y if MACH_VERDI_LTE
+
 config FB_MSM_LCDC_SAMSUNG_OLED_PT
 	bool
 	select FB_MSM_LCDC_PANEL
@@ -262,6 +292,16 @@ config FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_DSI_TOSHIBA
 	default n
 
+config FB_MSM_MIPI_RENESAS_VIDEO_WVGA_PT
+	bool
+	select FB_MSM_MIPI_DSI_RENESAS
+	default n
+
+config FB_MSM_MIPI_RENESAS_CMD_WVGA_PT
+	bool
+	select FB_MSM_MIPI_DSI_RENESAS
+	default n
+
 config FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
 	bool
 	select FB_MSM_MIPI_DSI_NOVATEK
@@ -282,6 +322,21 @@ config FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 	select FB_MSM_MIPI_DSI_RENESAS
 	default n
 
+config FB_MSM_MIPI_ORISE_CMD_QHD_PT
+	bool
+	select FB_MSM_MIPI_DSI_ORISE
+	default n
+
+config FB_MSM_MIPI_HIMAX_VIDEO_720P_PT
+	bool
+	select FB_MSM_MIPI_DSI_HIMAX
+	default n
+
+config FB_MSM_MIPI_HIMAX_CMD_720P_PT
+	bool
+	select FB_MSM_MIPI_DSI_HIMAX
+	default n
+
 config FB_MSM_MIPI_CHIMEI_WXGA
 	bool "LVDS Chimei WXGA Panel using Toshiba MIPI DSI-to-LVDS bridge."
 	select FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
@@ -298,19 +353,19 @@ config FB_MSM_MIPI_SIMULATOR_VIDEO
 
 config FB_MSM_OVERLAY_WRITEBACK
 	depends on FB_MSM_OVERLAY
-        bool "MDP overlay write back mode enable"
+	bool "MDP overlay write back mode enable"
 	---help---
 	  Support for MDP4 OVERLAY write back mode
 
 config FB_MSM_OVERLAY0_WRITEBACK
 	depends on FB_MSM_OVERLAY
-        bool "MDP overlay0 write back mode enable"
+	bool "MDP overlay0 write back mode enable"
 	---help---
 	  Support for MDP4 OVERLAY0 write back mode
 
 config FB_MSM_WRITEBACK_MSM_PANEL
 	depends on FB_MSM_OVERLAY
-        bool "MDP overlay write back panel enable"
+	bool "MDP overlay write back panel enable"
 	---help---
 	  Support for MDP4 OVERLAY write back mode
 choice
@@ -406,12 +461,16 @@ config FB_MSM_TRY_MDDI_CATCH_LCDC_PRISM
 
 config FB_MSM_MIPI_PANEL_DETECT
 	bool "MIPI Panel Detect"
+	depends on ARCH_MSM8X60
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
+	select FB_MSM_MIPI_RENESAS_CMD_WVGA_PT
 	select FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
 	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
+	select FB_MSM_MIPI_HIMAX_VIDEO_720P_PT
+	select FB_MSM_MIPI_ORISE_CMD_QHD_PT
 	select FB_MSM_MIPI_SIMULATOR_VIDEO
 	select FB_MSM_MIPI_CHIMEI_WXGA
 	select FB_MSM_MIPI_NOVATEK_CMD_HVGA_PT
@@ -579,30 +638,35 @@ config FB_MSM_HDMI_3D
 	bool
 	default n
 
+config MSM_DSI_CLK_AUTO_CALCULATE
+	bool "Use AUTO calculate"
+	depends on FB_MSM_MIPI_DSI
+	default n
+
 config FB_MSM_HDMI_ADV7520_PANEL
 	depends on FB_MSM_MDP40 && FB_MSM_OVERLAY
-        bool "LCDC HDMI ADV7520 720p Panel"
-        select FB_MSM_DTV
-        select FB_MSM_EXT_INTERFACE_COMMON
+	bool "LCDC HDMI ADV7520 720p Panel"
+	select FB_MSM_DTV
+	select FB_MSM_EXT_INTERFACE_COMMON
 	select FB_MSM_HDMI_COMMON
 	default n
-        ---help---
-        Support for LCDC 720p HDMI panel attached to ADV7520
+	---help---
+	  Support for LCDC 720p HDMI panel attached to ADV7520
 
 config FB_MSM_HDMI_ADV7520_PANEL_HDCP_SUPPORT
-        depends on FB_MSM_HDMI_ADV7520_PANEL
-        bool "Use HDCP mode"
-        default y
-        ---help---
-          Support for HDCP mode for ADV7520 HDMI 720p Panel
-          Choose to enable HDCP
+	depends on FB_MSM_HDMI_ADV7520_PANEL
+	bool "Use HDCP mode"
+	default y
+	---help---
+	  Support for HDCP mode for ADV7520 HDMI 720p Panel
+	  Choose to enable HDCP
 
 
 config FB_MSM_HDMI_MSM_PANEL
-	depends on FB_MSM_MDP40
 	bool "MSM HDMI 1080p Panel"
+	depends on FB_MSM_MDP40
 	select FB_MSM_DTV
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	select FB_MSM_HDMI_COMMON
 	select FB_MSM_HDMI_3D
 	default n
@@ -610,23 +674,23 @@ config FB_MSM_HDMI_MSM_PANEL
 	  Support for 480p/720p/1080i/1080p output through MSM HDMI
 
 config FB_MSM_HDMI_MSM_PANEL_DVI_SUPPORT
-	depends on FB_MSM_HDMI_MSM_PANEL
 	bool "Use DVI mode"
+	depends on FB_MSM_HDMI_MSM_PANEL
 	default n
 	---help---
 	  Support for DVI mode for MSM HDMI 1080p Panel
 
 config FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT
-	depends on FB_MSM_HDMI_MSM_PANEL
 	bool "Use HDCP mode"
+	depends on FB_MSM_HDMI_MSM_PANEL
 	default n
 	---help---
 	  Support for HDCP mode for MSM HDMI 1080p Panel
 	  Choose to enable HDCP
 
 config FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
-	depends on FB_MSM_HDMI_MSM_PANEL
 	bool "Enable CEC"
+	depends on FB_MSM_HDMI_MSM_PANEL
 	default n
 	---help---
 	  Support for HDMI CEC Feature
@@ -640,35 +704,35 @@ choice
 config FB_MSM_TVOUT_NTSC_M
 	bool "NTSC M"
 	select FB_MSM_TVOUT
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	---help---
 	  Support for NTSC M region (North American and Korea)
 
 config FB_MSM_TVOUT_NTSC_J
 	bool "NTSC J"
 	select FB_MSM_TVOUT
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	---help---
 	  Support for NTSC J region (Japan)
 
 config FB_MSM_TVOUT_PAL_BDGHIN
 	bool "PAL BDGHIN"
 	select FB_MSM_TVOUT
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	---help---
 	  Support for PAL BDGHIN region (Non-argentina PAL-N)
 
 config FB_MSM_TVOUT_PAL_M
 	bool "PAL M"
 	select FB_MSM_TVOUT
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	---help---
 	  Support for PAL M region
 
 config FB_MSM_TVOUT_PAL_N
 	bool "PAL N"
 	select FB_MSM_TVOUT
-        select FB_MSM_EXT_INTERFACE_COMMON
+	select FB_MSM_EXT_INTERFACE_COMMON
 	---help---
 	  Support for PAL N region (Argentina PAL-N)
 
@@ -728,6 +792,10 @@ config FB_MSM_SELF_REFRESH
 config FB_MSM_CABC
 	bool "Use CABC"
 	depends on FB_MSM
+	default n
+
+config LCDC_TURN_ON_BL_AFTER_PANEL_ON
+	bool "Turn on BL again after turn on LCDC panel"
 	default n
 
 endif

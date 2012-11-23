@@ -36,7 +36,7 @@
 #include "../devices.h"
 #include "../board-shooter.h"
 #include "../devices-msm8x60.h"
-#include "../../../../drivers/video/msm_8x60/mdp_hw.h"
+#include "../../../../drivers/video/msm/mdp_hw.h"
 
 enum MODE_3D {
 	BARRIER_OFF       = 0,
