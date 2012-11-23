@@ -2188,7 +2188,7 @@ static void __init msm8x60_init_dsps(void)
 /* Note: must be multiple of 4096 */
 #define MSM_FB_SIZE roundup(MSM_FB_PRIM_BUF_SIZE + MSM_FB_EXT_BUF_SIZE, 4096)
 
-#define MSM_PMEM_SF_SIZE			0x1000000 /* 16 Mbytes */
+#define MSM_PMEM_SF_SIZE			0x2000000 /* 32 Mbytes */
 #define MSM_PMEM_ADSP_SIZE			0x2700000
 #define MSM_PMEM_ADSP2_SIZE			0x800000 /* 1152 * 1920 * 1.5 * 2 */
 #define MSM_PMEM_AUDIO_SIZE			0x239000
