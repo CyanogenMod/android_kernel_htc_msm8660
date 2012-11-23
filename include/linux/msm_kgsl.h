@@ -158,13 +158,8 @@ struct kgsl_device_platform_data {
 	unsigned int clk_map;
 	unsigned int idle_needed;
 	struct msm_bus_scale_pdata *bus_scale_table;
-#if !defined(CONFIG_MSM_KGSL_ADRENO200) && !defined(CONFIG_MSM_KGSL_ADRENO205)
 	struct kgsl_device_iommu_data *iommu_data;
 	int iommu_count;
-#else
-	const char *iommu_user_ctx_name;
-	const char *iommu_priv_ctx_name;
-#endif
 };
 
 #endif
