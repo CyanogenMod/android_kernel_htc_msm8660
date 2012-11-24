@@ -656,7 +656,11 @@ void __init holiday_audio_init(void)
 	pr_aud_info("%s: 0x%x\n", __func__, skuid);
 	switch (skuid) {
 	case SKU_ATT1:
+		support_audience = 1;
+		break;
 	case SKU_ATT2:
+		support_audience = 1;
+		break;
 	case SKU_ATT3:
 		support_audience = 1;
 		break;
