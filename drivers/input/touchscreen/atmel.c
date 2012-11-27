@@ -1001,9 +1001,7 @@ static void msg_process_multitouch(struct atmel_ts_data *ts, uint8_t *data, uint
 			if (ts->id->version >= 0x20 && ts->pre_data[0] < RECALIB_DONE) {
 				if (ts->finger_count == 0) {
 					if (ts->pre_data[0] == RECALIB_NEED &&
-						!ts->unlock_attr && idx == 0 &&
-						ts->finger_data[idx].y > 750 &&
-						ts->finger_data[idx].y - ts->pre_data[idx+1] > 135) {
+						!ts->unlock_attr && idx == 0) {
 							restore_normal_threshold(ts);
 							confirm_calibration(ts, 1, 0);
 					} else if (ts->pre_data[0] == RECALIB_UNLOCK &&
