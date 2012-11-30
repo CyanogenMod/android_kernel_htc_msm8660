@@ -27,13 +27,6 @@ config MMC_PERF_PROFILING
 	  If you say Y here, support will be added for collecting
 	  performance numbers at the MMC Queue and Host layers.
 
-# Modified by Memory, Studio Software for Zimmer
-config ZIMMER
-	bool "Using new eMMC driver for Zimmer"
-	depends on SWAP != n
-	help
-	  This is an option to enable Zimmer.
-
 # 2012-03-29 SHR/SHRK workaround to disable write protection for radio_config
 config MMC_DISABLE_WP_RFG_5
 	bool "Enable workaround for radio_config on SHR/SHRK"
