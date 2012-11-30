@@ -1162,6 +1162,7 @@ static u8 createphyslink_handler(struct amp_ctx *ctx, u8 evt_type, void *data)
 		if (skb->len < sizeof(*grsp))
 			goto cpl_finished;
 		grsp = (struct a2mp_getinfo_rsp *) skb_pull(skb, sizeof(*hdr));
+		skb_pull(skb, sizeof(*grsp));
 		if (grsp->status)
 			goto cpl_finished;
 		if (grsp->id != ctx->d.cpl.remote_id)
@@ -1175,7 +1176,6 @@ static u8 createphyslink_handler(struct amp_ctx *ctx, u8 evt_type, void *data)
 		ctrl->min_latency = le32_to_cpu(grsp->min_latency);
 		ctrl->pal_cap = le16_to_cpu(grsp->pal_cap);
 		ctrl->max_assoc_size = le16_to_cpu(grsp->assoc_size);
-		skb_pull(skb, sizeof(*grsp));
 
 		ctx->d.cpl.max_len = ctrl->max_assoc_size;
 
@@ -1195,8 +1195,6 @@ static u8 createphyslink_handler(struct amp_ctx *ctx, u8 evt_type, void *data)
 			goto cpl_finished;
 		hdr = (void *) skb->data;
 		arsp = (void *) skb_pull(skb, sizeof(*hdr));
-		if (arsp->id != ctx->d.cpl.remote_id)
-			goto cpl_finished;
 		if (arsp->status != 0)
 			goto cpl_finished;
 
@@ -1204,12 +1202,12 @@ static u8 createphyslink_handler(struct amp_ctx *ctx, u8 evt_type, void *data)
 		assoc = (u8 *) skb_pull(skb, sizeof(*arsp));
 		ctx->d.cpl.len_so_far = 0;
 		ctx->d.cpl.rem_len = hdr->len - sizeof(*arsp);
+		skb_pull(skb, ctx->d.cpl.rem_len);
 		rassoc = kmalloc(ctx->d.cpl.rem_len, GFP_ATOMIC);
 		if (!rassoc)
 			goto cpl_finished;
 		memcpy(rassoc, assoc, ctx->d.cpl.rem_len);
 		ctx->d.cpl.remote_assoc = rassoc;
-		skb_pull(skb, ctx->d.cpl.rem_len);
 
 		/* set up CPL command */
 		ctx->d.cpl.phy_handle = physlink_handle(ctx->hdev);

@@ -103,6 +103,17 @@ struct bt_power {
 #define BT_ERR(fmt, arg...)  printk(KERN_ERR "%s: " fmt "\n" , __func__ , ## arg)
 #define BT_DBG(fmt, arg...)  pr_debug("%s: " fmt "\n" , __func__ , ## arg)
 
+/* HTC_BT add begin */
+#define PR_BT_EMERG(fmt, arg...)    printk(KERN_EMERG   "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_ALERT(fmt, arg...)    printk(KERN_ALERT   "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_CRIT(fmt, arg...)     printk(KERN_CRIT    "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_ERR(fmt, arg...)      printk(KERN_ERR     "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_WARNING(fmt, arg...)  printk(KERN_WARNING "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_NOTICE(fmt, arg...)   printk(KERN_NOTICE  "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_INFO(fmt, arg...)     printk(KERN_INFO    "[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define PR_BT_DEBUG(fmt, arg...)    printk(KERN_DEBUG   "[BT] %s: " fmt "\n" , __func__ , ## arg)
+/* HTC_BT add end */
+
 /* Connection and socket states */
 enum {
 	BT_CONNECTED = 1, /* Equal to TCP_ESTABLISHED to make net code happy */

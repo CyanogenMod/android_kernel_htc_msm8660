@@ -65,7 +65,7 @@ static void hci_le_connect(struct hci_conn *conn)
 	cp.peer_addr_type = conn->dst_type;
 	cp.conn_interval_min = cpu_to_le16(0x0008);
 	cp.conn_interval_max = cpu_to_le16(0x0100);
-	cp.supervision_timeout = cpu_to_le16(0x0064);
+	cp.supervision_timeout = cpu_to_le16(1000);
 	cp.min_ce_len = cpu_to_le16(0x0001);
 	cp.max_ce_len = cpu_to_le16(0x0001);
 
@@ -744,7 +744,7 @@ void hci_disconnect(struct hci_conn *conn, __u8 reason)
 {
 	BT_DBG("conn %p", conn);
 
-	hci_proto_disconn_cfm(conn, reason);
+	hci_proto_disconn_cfm(conn, reason, 0);
 }
 EXPORT_SYMBOL(hci_disconnect);
 
@@ -837,7 +837,7 @@ int hci_conn_security(struct hci_conn *conn, __u8 sec_level, __u8 auth_type)
 		return 0;
 	} else if (conn->link_mode & HCI_LM_ENCRYPT) {
 		return hci_conn_auth(conn, sec_level, auth_type);
-	} else if (test_and_set_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
+	} else if (test_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
 		return 0;
 	}
 
@@ -1047,7 +1047,7 @@ void hci_chan_modify(struct hci_chan *chan,
 EXPORT_SYMBOL(hci_chan_modify);
 
 /* Drop all connection on the device */
-void hci_conn_hash_flush(struct hci_dev *hdev)
+void hci_conn_hash_flush(struct hci_dev *hdev, u8 is_process)
 {
 	struct hci_conn_hash *h = &hdev->conn_hash;
 	struct list_head *p;
@@ -1063,7 +1063,7 @@ void hci_conn_hash_flush(struct hci_dev *hdev)
 
 		c->state = BT_CLOSED;
 
-		hci_proto_disconn_cfm(c, 0x16);
+		hci_proto_disconn_cfm(c, 0x16, is_process);
 		hci_conn_del(c);
 	}
 }
