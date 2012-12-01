@@ -5,7 +5,7 @@ ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
 EXTRA_CFLAGS += -Idrivers/media/video/msm/csi
 endif
 obj-$(CONFIG_MSM_CAMERA_SENSOR) += msm_sensor.o
-obj-$(CONFIG_IMX074) += imx074_v4l2.o
+obj-$(CONFIG_S5K3H1GX) += s5k3h1gx.o
 ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
 obj-$(CONFIG_S5K3H2YX) += s5k3h2yx_v4l2.o
 obj-$(CONFIG_S5K4E5YX) += s5k4e5yx_v4l2.o
@@ -16,10 +16,12 @@ obj-$(CONFIG_S5K6A1GX) += s5k6a1gx_v4l2.o
 obj-$(CONFIG_S5K6AAFX) += s5k6aafx.o
 obj-$(CONFIG_OV8830) += ov8830.o
 obj-$(CONFIG_MT9D015) += mt9d015.o
+obj-$(CONFIG_MT9V113) += mt9v113.o
 obj-$(CONFIG_OV2720) += ov2720.o
 obj-$(CONFIG_SP3D) += sp3d.o
 obj-$(CONFIG_QS_S5K4E1) += qs_s5k4e1.o
 
+obj-$(CONFIG_MACH_PYRAMID) += s5k3h1gx_reg_pyd.o mt9v113_reg_pyd.o
 obj-$(CONFIG_MACH_MECHA) += s5k6aafx_reg_mecha.o s5k3h1gx_mecha.o s5k3h1gx_reg_mecha.o#HTC_CAM chuck
 obj-$(CONFIG_MACH_VIVO) += s5k6aafx_reg_vivo.o
 obj-$(CONFIG_MACH_VIVOW) += s5k6aafx_reg_vivo.o
