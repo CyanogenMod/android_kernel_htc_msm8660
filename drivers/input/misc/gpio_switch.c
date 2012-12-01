@@ -142,6 +142,12 @@ static enum hrtimer_restart gpio_event_switch_timer_func(struct hrtimer *timer)
 		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
 			    key_entry->code, pressed);
 		sync_needed = true;
+#ifdef CONFIG_MACH_DOUBLESHOT
+		if (key_entry->code == SW_LID) {
+			if (ds->info->set_qty_irq)
+				ds->info->set_qty_irq(pressed);
+		}
+#endif
 	}
 	if (sync_needed) {
 		for (i = 0; i < ds->input_devs->count; i++)

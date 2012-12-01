@@ -102,7 +102,7 @@ endif
 
 ifeq ($(CONFIG_FB_MSM_MIPI_PANEL_DETECT),y)
 obj-y += mipi_novatek_cmd_qhd_pt.o
-#obj-y += mipi_novatek_cmd_wvga_pt.o
+obj-y += mipi_novatek_cmd_wvga_pt.o
 obj-y += mipi_himax_video_720p_pt.o
 #obj-y += mipi_renesas_cmd_wvga_pt.o
 obj-y += mipi_orise_cmd_qhd_pt.o

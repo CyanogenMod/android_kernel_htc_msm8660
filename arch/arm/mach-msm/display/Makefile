@@ -1,4 +1,5 @@
 obj-$(CONFIG_MACH_PYRAMID) += pyramid-panel.o
+obj-$(CONFIG_MACH_DOUBLESHOT) += doubleshot-panel.o
 obj-$(CONFIG_MACH_SHOOTER) += shooter-panel.o
 obj-$(CONFIG_MACH_SHOOTER_U) += shooter_u-panel.o
 obj-$(CONFIG_MACH_SHOOTER_K) += shooter_k-panel.o

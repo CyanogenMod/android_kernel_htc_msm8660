@@ -100,6 +100,9 @@ endif
    zreladdr-$(CONFIG_MACH_VIGOR)        := 0x48808000
    params_phys-$(CONFIG_MACH_VIGOR)     := 0x48800100
    initrd_phys-$(CONFIG_MACH_VIGOR)     := 0x49800000
+   zreladdr-$(CONFIG_MACH_DOUBLESHOT)   := 0x48008000
+   params_phys-$(CONFIG_MACH_DOUBLESHOT):= 0x48000100
+   initrd_phys-$(CONFIG_MACH_DOUBLESHOT):= 0x49000000
 
 # MSM8960
    zreladdr-$(CONFIG_ARCH_MSM8960)	:= 0x80408000

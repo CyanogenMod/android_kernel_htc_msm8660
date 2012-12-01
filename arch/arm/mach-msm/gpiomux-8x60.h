@@ -21,6 +21,7 @@ extern struct msm_gpiomux_configs msm8x60_fluid_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_charm_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_dragon_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_pyramid_gpiomux_cfgs[] __initdata;
+extern struct msm_gpiomux_configs msm8x60_doubleshot_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_shooter_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_shooter_u_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_rider_gpiomux_cfgs[] __initdata;
