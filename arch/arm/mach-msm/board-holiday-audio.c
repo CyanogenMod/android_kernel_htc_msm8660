@@ -408,10 +408,12 @@ int holiday_support_audience(void)
 
 void holiday_get_acoustic_tables(struct acoustic_tables *tb)
 {
-	if (support_audience)
-		strcpy(tb->aic3254, "AIC3254_REG_DualMic_WA.txt");
-	else
+	if (support_audience) {
+		strcpy(tb->aic3254, "AIC3254_REG_DualMic_XD.csv");
+		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
+	} else {
 		strcpy(tb->aic3254, "AIC3254_REG_DualMic.txt");
+	}
 }
 
 int holiday_support_beats(void)
