@@ -80,7 +80,7 @@
 #include <linux/device.h>
 #include <linux/uaccess.h>
 
-#include <media/msm_gemini.h>
+#include <media/msm_gemini_8x60.h>
 #include "msm_gemini_sync.h"
 #include "msm_gemini_common.h"
 
@@ -94,11 +94,11 @@ static int msm_gemini_open(struct inode *inode, struct file *filp)
 		struct msm_gemini_device, cdev);
 	filp->private_data = pgmn_dev;
 
-	GMN_DBG("%s:%d]\n", __func__, __LINE__);
+	pr_info("[CAM] %s:%d]\n", __func__, __LINE__);
 
 	rc = __msm_gemini_open(pgmn_dev);
 
-	GMN_DBG(KERN_INFO "%s:%d] %s open_count = %d\n", __func__, __LINE__,
+	pr_info("[CAM] %s:%d] %s open_count = %d\n", __func__, __LINE__,
 		filp->f_path.dentry->d_name.name, pgmn_dev->open_count);
 
 	return rc;
@@ -110,11 +110,11 @@ static int msm_gemini_release(struct inode *inode, struct file *filp)
 
 	struct msm_gemini_device *pgmn_dev = filp->private_data;
 
-	GMN_DBG(KERN_INFO "%s:%d]\n", __func__, __LINE__);
+	pr_info("[CAM] %s:%d]\n", __func__, __LINE__);
 
 	rc = __msm_gemini_release(pgmn_dev);
 
-	GMN_DBG(KERN_INFO "%s:%d] %s open_count = %d\n", __func__, __LINE__,
+	pr_info("[CAM] %s:%d] %s open_count = %d\n", __func__, __LINE__,
 		filp->f_path.dentry->d_name.name, pgmn_dev->open_count);
 	return rc;
 }
@@ -195,7 +195,7 @@ static int msm_gemini_init(struct platform_device *pdev)
 		goto fail_4;
 	}
 
-	printk(KERN_INFO "%s %s: success\n", __func__, MSM_GEMINI_NAME);
+	pr_info("[CAM] %s %s: success\n", __func__, MSM_GEMINI_NAME);
 
 	return rc;
 

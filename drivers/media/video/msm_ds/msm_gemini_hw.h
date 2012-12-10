@@ -29,7 +29,7 @@
 #ifndef MSM_GEMINI_HW_H
 #define MSM_GEMINI_HW_H
 
-#include <media/msm_gemini.h>
+#include <media/msm_gemini_8x60.h>
 #include "msm_gemini_hw_reg.h"
 
 struct msm_gemini_hw_buf {
@@ -101,6 +101,7 @@ void msm_gemini_hw_clk_cfg(void);
 
 void msm_gemini_hw_reset(void *base, int size);
 void msm_gemini_hw_irq_cfg(void);
+void msm_gemini_hw_init(void *base, int size);
 
 uint32_t msm_gemini_hw_read(struct msm_gemini_hw_cmd *hw_cmd_p);
 void msm_gemini_hw_write(struct msm_gemini_hw_cmd *hw_cmd_p);

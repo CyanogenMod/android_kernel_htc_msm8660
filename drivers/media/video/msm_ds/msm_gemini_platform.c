@@ -75,23 +75,18 @@
 #include <mach/clk.h>
 #include <linux/io.h>
 #include <linux/android_pmem.h>
-/*#include <mach/msm_reqs.h>*/
 #ifdef CONFIG_MSM_CAMERA_7X30
-#include <mach/camera.h>
+#include <mach/camera-7x30.h>
 #elif defined(CONFIG_MSM_CAMERA_8X60)
 #include <mach/camera-8x60.h>
 #endif
 
 #include "msm_gemini_platform.h"
 #include "msm_gemini_common.h"
+#include "msm_gemini_hw.h"
 
-#ifdef CONFIG_MSM_NPA_SYSTEM_BUS
-/* NPA Flow ID */
-#define MSM_SYSTEM_BUS_RATE	MSM_AXI_FLOW_JPEG_12MP
-#else
 /* AXI rate in KHz */
 #define MSM_SYSTEM_BUS_RATE	160000
-#endif
 
 void msm_gemini_platform_p2v(struct file  *file)
 {
@@ -165,6 +160,7 @@ int msm_gemini_platform_init(struct platform_device *pdev,
 		goto fail2;
 	}
 
+	msm_gemini_hw_init(gemini_base, resource_size(gemini_mem));
 	rc = request_irq(gemini_irq, handler, IRQF_TRIGGER_RISING, "gemini",
 		context);
 	if (rc) {
@@ -181,7 +177,6 @@ int msm_gemini_platform_init(struct platform_device *pdev,
 	return rc;
 
 fail3:
-	free_irq(gemini_irq, context);
 	msm_camio_jpeg_clk_disable();
 
 fail2:
@@ -204,4 +199,3 @@ int msm_gemini_platform_release(struct resource *mem, void *base, int irq,
 	GMN_DBG("%s:%d] success\n", __func__, __LINE__);
 	return result;
 }
-
