@@ -244,10 +244,13 @@ void holiday_imic_pamp_on_without_audience(int en)
 
 void holiday_snddev_imic_pamp_on(int en)
 {
+#ifdef CONFIG_HTC_HOLIDAY_AUDIO
 	if (support_audience)
 		holiday_imic_pamp_on_with_audience(en);
 	else
+#else
 		holiday_imic_pamp_on_without_audience(en);
+#endif
 }
 
 void holiday_snddev_bmic_pamp_on(int en)
