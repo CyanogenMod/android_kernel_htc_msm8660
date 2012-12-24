@@ -16,7 +16,9 @@
 #include <linux/kernel.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
+#ifndef CONFIG_MACH_DOUBLESHOT
 #include <linux/hrtimer.h>
+#endif
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/wakelock.h>
@@ -27,11 +29,26 @@
 #include <linux/curcial_oj.h>
 #endif
 
+#ifdef CONFIG_MACH_DOUBLESHOT
+static struct workqueue_struct *km_queue;
+
+static int kp_use_irq = 0;
+int get_kp_irq_mode(void)
+{
+	return kp_use_irq;
+}
+EXPORT_SYMBOL_GPL(get_kp_irq_mode);
+#endif
+
 struct gpio_kp {
 	int debug_log;
 	struct gpio_event_input_devs *input_devs;
 	struct gpio_event_matrix_info *keypad_info;
+#ifdef CONFIG_MACH_DOUBLESHOT
+	struct work_struct work;
+#else
 	struct hrtimer timer;
+#endif
 	struct wake_lock wake_lock;
 	int current_output;
 	unsigned int use_irq:1;
@@ -138,9 +155,15 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 					out, in, mi->output_gpios[out],
 					mi->input_gpios[in], pressed);
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
-			if (!mi->info.oj_btn || keycode != BTN_MOUSE)
+			if (!mi->info.oj_btn || keycode != BTN_MOUSE) {
 #endif
-			input_report_key(kp->input_devs->dev[dev], keycode, pressed);
+				input_report_key(kp->input_devs->dev[dev], keycode, pressed);
+#ifdef CONFIG_MACH_DOUBLESHOT
+				input_sync(kp->input_devs->dev[dev]);
+#endif
+#ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
+			}
+#endif
 		}
 	}
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
@@ -155,6 +178,7 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 #endif
 }
 
+#ifndef CONFIG_MACH_DOUBLESHOT
 static void report_sync(struct gpio_kp *kp)
 {
 	int i;
@@ -164,11 +188,18 @@ static void report_sync(struct gpio_kp *kp)
 }
 
 static enum hrtimer_restart gpio_keypad_timer_func(struct hrtimer *timer)
+#else
+static void gpio_keypad_timer_func(struct work_struct *work)
+#endif
 {
 	int out, in;
 	int key_index;
 	int gpio;
+#ifdef CONFIG_MACH_DOUBLESHOT
+	struct gpio_kp *kp = container_of(work, struct gpio_kp, work);
+#else
 	struct gpio_kp *kp = container_of(timer, struct gpio_kp, timer);
+#endif
 	struct gpio_event_matrix_info *mi = kp->keypad_info;
 	unsigned gpio_keypad_flags = mi->flags;
 	unsigned polarity = !!(gpio_keypad_flags & GPIOKPF_ACTIVE_HIGH);
@@ -206,16 +237,26 @@ static enum hrtimer_restart gpio_keypad_timer_func(struct hrtimer *timer)
 			gpio_set_value(gpio, polarity);
 		else
 			gpio_direction_output(gpio, polarity);
+#ifdef CONFIG_MACH_DOUBLESHOT
+		queue_work(km_queue, &kp->work);
+		return;
+#else
 		hrtimer_start(timer, timespec_to_ktime(mi->settle_time),
 			HRTIMER_MODE_REL);
 		return HRTIMER_NORESTART;
+#endif
 	}
 	if (gpio_keypad_flags & GPIOKPF_DEBOUNCE) {
 		if (kp->key_state_changed) {
+#ifdef CONFIG_MACH_DOUBLESHOT
+			queue_work(km_queue, &kp->work);
+			return;
+#else
 			hrtimer_start(&kp->timer,
 				timespec_to_ktime(mi->debounce_delay),
 				      HRTIMER_MODE_REL);
 			return HRTIMER_NORESTART;
+#endif
 		}
 		kp->key_state_changed = kp->last_key_state_changed;
 	}
@@ -226,12 +267,19 @@ static enum hrtimer_restart gpio_keypad_timer_func(struct hrtimer *timer)
 		for (out = 0; out < mi->noutputs; out++)
 			for (in = 0; in < mi->ninputs; in++, key_index++)
 				report_key(kp, key_index, out, in);
+#ifndef CONFIG_MACH_DOUBLESHOT
 		report_sync(kp);
+#endif
 	}
 	if (!kp->use_irq || kp->some_keys_pressed) {
+#ifdef CONFIG_MACH_DOUBLESHOT
+		queue_work(km_queue, &kp->work);
+		return;
+#else
 		hrtimer_start(timer, timespec_to_ktime(mi->poll_time),
 			HRTIMER_MODE_REL);
 		return HRTIMER_NORESTART;
+#endif
 	}
 
 	/* No keys are pressed, reenable interrupt */
@@ -244,7 +292,11 @@ static enum hrtimer_restart gpio_keypad_timer_func(struct hrtimer *timer)
 	for (in = 0; in < mi->ninputs; in++)
 		enable_irq(gpio_to_irq(mi->input_gpios[in]));
 	wake_unlock(&kp->wake_lock);
+#ifdef CONFIG_MACH_DOUBLESHOT
+	return;
+#else
 	return HRTIMER_NORESTART;
+#endif
 }
 
 static irqreturn_t gpio_keypad_irq_handler(int irq_in, void *dev_id)
@@ -271,7 +323,11 @@ static irqreturn_t gpio_keypad_irq_handler(int irq_in, void *dev_id)
 			gpio_direction_input(mi->output_gpios[i]);
 	}
 	wake_lock(&kp->wake_lock);
+#ifdef CONFIG_MACH_DOUBLESHOT
+	queue_work(km_queue, &kp->work);
+#else
 	hrtimer_start(&kp->timer, ktime_set(0, 0), HRTIMER_MODE_REL);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -302,6 +358,17 @@ static int gpio_keypad_request_irqs(struct gpio_kp *kp)
 		err = irq = gpio_to_irq(mi->input_gpios[i]);
 		if (err < 0)
 			goto err_gpio_get_irq_num_failed;
+#ifdef CONFIG_MACH_DOUBLESHOT
+		/* TODO: does this need to be different from below? */
+		err = request_any_context_irq(irq, gpio_keypad_irq_handler, request_flags,
+				  "gpio_kp", kp);
+		if (err < 0) {
+			KEY_LOGE("KEY_ERR: gpiomatrix: request_irq failed for input %d, "
+				"irq %d, err %d\n", mi->input_gpios[i], irq, err);
+			goto err_request_irq_failed;
+		}
+		err = irq_set_irq_wake(irq, 1);
+#else
 		err = request_irq(irq, gpio_keypad_irq_handler, request_flags,
 				  "gpio_kp", kp);
 		if (err) {
@@ -310,6 +377,7 @@ static int gpio_keypad_request_irqs(struct gpio_kp *kp)
 			goto err_request_irq_failed;
 		}
 		err = enable_irq_wake(irq);
+#endif /* CONFIG_MACH_DOUBLESHOT */
 		if (err) {
 			KEY_LOGE("KEY_ERR: gpiomatrix: set_irq_wake failed for input %d, "
 				"irq %d\n", mi->input_gpios[i], irq);
@@ -337,12 +405,45 @@ int gpio_event_matrix_func(struct gpio_event_input_devs *input_devs,
 	int i;
 	int err;
 	int key_count;
+#ifdef CONFIG_MACH_DOUBLESHOT
+	static int irq_status = 1;
+	int phone_call_status;
+	int fm_radio_status;
+#endif
 	struct gpio_kp *kp;
 	struct gpio_event_matrix_info *mi;
 
 	mi = container_of(info, struct gpio_event_matrix_info, info);
 	if (func == GPIO_EVENT_FUNC_SUSPEND || func == GPIO_EVENT_FUNC_RESUME) {
 		/* TODO: disable scanning */
+#ifdef CONFIG_MACH_DOUBLESHOT
+		if (mi->detect_phone_status == 0) {
+			if (func == GPIO_EVENT_FUNC_SUSPEND)
+				irq_status = 0;
+			else
+				irq_status = 1;
+		} else {
+			phone_call_status = gpio_event_get_phone_call_status() & 0x01;
+			fm_radio_status = gpio_event_get_fm_radio_status() & 0x01;
+			KEY_LOGI("%s: mi->ninputs: %d, func&0x01 = %d, phone_call_status=%d, fm_radio_status=%d\n", __func__, mi->ninputs, func & 0x01, phone_call_status, fm_radio_status);
+
+			if (irq_status != ((func & 0x01) | phone_call_status | fm_radio_status)) {
+				irq_status = ((func & 0x01) | phone_call_status | fm_radio_status);
+				KEY_LOGI("%s: irq_status %d \n", __func__, irq_status);
+			} else {
+				KEY_LOGI("%s: irq_status %d, did not change\n", __func__, irq_status);
+				return 0;
+			}
+		}
+
+		for (i = 0; i < mi->ninputs; i++) {
+			err = irq_set_irq_wake(gpio_to_irq(mi->input_gpios[i]), irq_status);
+			if (err)
+				KEY_LOGE("gpiomatrix: set_irq_wake failed ,irq_status %d ,for input irq %d\n",  irq_status, i);
+			else
+				KEY_LOGD("%s: set ok,irq_status %d, irq %d\n", __func__, irq_status, i);
+		}
+#endif
 		return 0;
 	}
 
@@ -431,8 +532,13 @@ int gpio_event_matrix_func(struct gpio_event_input_devs *input_devs,
 		kp->current_output = mi->noutputs;
 		kp->key_state_changed = 1;
 
+#ifdef CONFIG_MACH_DOUBLESHOT
+		km_queue = create_singlethread_workqueue("km_queue");
+		INIT_WORK(&kp->work, gpio_keypad_timer_func);
+#else
 		hrtimer_init(&kp->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		kp->timer.function = gpio_keypad_timer_func;
+#endif
 		wake_lock_init(&kp->wake_lock, WAKE_LOCK_SUSPEND, "gpio_kp");
 		err = gpio_keypad_request_irqs(kp);
 		kp->use_irq = err == 0;
@@ -444,7 +550,11 @@ int gpio_event_matrix_func(struct gpio_event_input_devs *input_devs,
 
 		if (kp->use_irq)
 			wake_lock(&kp->wake_lock);
+#ifdef CONFIG_MACH_DOUBLESHOT
+		queue_work(km_queue, &kp->work);
+#else
 		hrtimer_start(&kp->timer, ktime_set(0, 0), HRTIMER_MODE_REL);
+#endif
 
 		return 0;
 	}
@@ -456,7 +566,11 @@ int gpio_event_matrix_func(struct gpio_event_input_devs *input_devs,
 		for (i = mi->noutputs - 1; i >= 0; i--)
 			free_irq(gpio_to_irq(mi->input_gpios[i]), kp);
 
+#ifdef CONFIG_MACH_DOUBLESHOT
+	cancel_work_sync(&kp->work);
+#else
 	hrtimer_cancel(&kp->timer);
+#endif
 	wake_lock_destroy(&kp->wake_lock);
 	for (i = mi->noutputs - 1; i >= 0; i--) {
 err_gpio_direction_input_failed:
