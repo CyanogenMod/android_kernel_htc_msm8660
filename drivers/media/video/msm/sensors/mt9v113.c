@@ -831,15 +831,29 @@ int mt9v113_set_flip_mirror(struct msm_camera_sensor_info *info)
 	int rc = 0;
 	if (info != NULL) {
 		if (info->mirror_mode) {
+#ifdef CONFIG_MACH_DOUBLESHOT
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#else
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#endif
 		} else {
+#ifdef CONFIG_MACH_DOUBLESHOT
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#else
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 			rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#endif
 		}
 		if (rc < 0)
 			goto set_flip_mirror_fail;
@@ -890,15 +904,29 @@ static int mt9v113_set_front_camera_mode(enum frontcam_t frontcam_value)
 	case CAMERA_REVERSE:
 		/*reverse mode*/
 	if (mt9v113_ctrl->sensordata->mirror_mode) {
+#ifdef CONFIG_MACH_DOUBLESHOT
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#else
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#endif
 	} else {
+#ifdef CONFIG_MACH_DOUBLESHOT
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#else
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#endif
 	}
 
 	if (rc < 0)
@@ -909,15 +937,29 @@ static int mt9v113_set_front_camera_mode(enum frontcam_t frontcam_value)
 	case CAMERA_PORTRAIT_REVERSE:
 	/*portrait reverse mode*//* 0x25: do mirror */
 	if (mt9v113_ctrl->sensordata->mirror_mode) {
+#ifdef CONFIG_MACH_DOUBLESHOT
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#else
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#endif
 	} else {
+#ifdef CONFIG_MACH_DOUBLESHOT
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
+	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0026, WORD_LEN);
+#else
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x2717, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x098C, 0x272D, WORD_LEN);
 	rc = mt9v113_i2c_write(mt9v113_client->addr, 0x0990, 0x0025, WORD_LEN);
+#endif
 	}
 
 	if (rc < 0)
