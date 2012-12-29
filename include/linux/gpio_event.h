@@ -221,4 +221,10 @@ struct gpio_event_switch_info {
 	void (*set_qty_irq)(uint8_t);
 };
 
+#ifdef CONFIG_MACH_DOUBLESHOT
+int gpio_event_get_phone_call_status(void);
+int gpio_event_get_fm_radio_status(void);
+int gpio_event_get_quickboot_status(void);
+#endif
+
 #endif /* _LINUX_GPIO_EVENT_H */
