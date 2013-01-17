@@ -412,8 +412,7 @@ int holiday_support_audience(void)
 void holiday_get_acoustic_tables(struct acoustic_tables *tb)
 {
 	if (support_audience) {
-		strcpy(tb->aic3254, "AIC3254_REG_DualMic_XD.csv");
-		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
+		strcpy(tb->aic3254, "AIC3254_REG_DualMic_WA.txt");
 	} else {
 		strcpy(tb->aic3254, "AIC3254_REG_DualMic.txt");
 	}
@@ -661,11 +660,7 @@ void __init holiday_audio_init(void)
 	pr_aud_info("%s: 0x%x\n", __func__, skuid);
 	switch (skuid) {
 	case SKU_ATT1:
-		support_audience = 1;
-		break;
 	case SKU_ATT2:
-		support_audience = 1;
-		break;
 	case SKU_ATT3:
 		support_audience = 1;
 		break;
