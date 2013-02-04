@@ -23,15 +23,15 @@
 #include <mach/gpio.h>
 #include <mach/dal.h>
 #include <mach/tpa2051d3.h>
-#include <mach/qdsp6v2_1x/snddev_icodec.h>
-#include <mach/qdsp6v2_1x/snddev_ecodec.h>
-#include <mach/qdsp6v2_1x/snddev_hdmi.h>
-#include <mach/qdsp6v2_1x/apr_audio.h>
-#include <mach/qdsp6v2_1x/q6asm.h>
+#include <mach/qdsp6v3/snddev_icodec.h>
+#include <mach/qdsp6v3/snddev_ecodec.h>
+#include <mach/qdsp6v3/snddev_hdmi.h>
+#include <mach/qdsp6v3/apr_audio.h>
+#include <mach/qdsp6v3/q6asm.h>
 #include <mach/htc_acoustic_8x60.h>
 
 #include "board-pyramid-audio-data.h"
-#include <mach/qdsp6v2_1x/audio_dev_ctl.h>
+#include <mach/qdsp6v3/audio_dev_ctl.h>
 
 static struct mutex bt_sco_lock;
 static struct mutex mic_lock;
@@ -434,10 +434,6 @@ static struct q6v2audio_aic3254_ops aops = {
        .aic3254_set_mode = pyramid_aic3254_set_mode,
 };
 
-static struct q6asm_ops qops = {
-	.get_q6_effect = pyramid_get_q6_effect_mode,
-};
-
 void __init pyramid_audio_init(void)
 {
 	mutex_init(&bt_sco_lock);
@@ -450,7 +446,6 @@ void __init pyramid_audio_init(void)
 	htc_8x60_register_ecodec_ops(&eops);
 	acoustic_register_ops(&acoustic);
 	htc_8x60_register_aic3254_ops(&aops);
-	htc_8x60_register_q6asm_ops(&qops);
 	msm_set_voc_freq(8000, 8000);
 #endif
 

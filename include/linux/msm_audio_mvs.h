@@ -104,6 +104,7 @@ struct msm_audio_mvs_config {
 
 struct msm_audio_mvs_frame {
 	uint32_t frame_type;
+	uint32_t frame_rate;
 	uint32_t len;
 	uint8_t voc_pkt[MVS_MAX_VOC_PKT_SIZE];
 
