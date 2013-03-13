@@ -542,8 +542,15 @@ u32 msm_io_r_mb(void __iomem *addr);
 void msm_io_dump(void __iomem *addr, int size);
 void msm_io_memcpy(void __iomem *dest_addr, void __iomem *src_addr, u32 len);
 void msm_camio_set_perf_lvl(enum msm_bus_perf_setting);
+#ifdef CONFIG_MACH_DOUBLESHOT
+int msm_camio_csi_enable_lp_rec(void);
+int msm_camio_csi_disable_lp_rec(void);
+void msm_camio_clk_set_min_rate(struct clk *clk, int rate);
+#endif
+#ifndef CONFIG_MACH_DOUBLESHOT
 int msm_camio_csi_enable_lp_rec(int lane_cnt);
 int msm_camio_csi_disable_lp_rec(int lane_cnt);
+#endif
 void msm_camio_csi_core_reset(void);
 void msm_camio_csi_misr_read(void);
 void msm_camio_csi_misr_debug_on(void);
