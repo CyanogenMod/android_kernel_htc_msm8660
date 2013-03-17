@@ -18,6 +18,8 @@
 #include <linux/gpio_event.h>
 #ifndef CONFIG_MACH_DOUBLESHOT
 #include <linux/hrtimer.h>
+#else
+#include <linux/jiffies.h>
 #endif
 #include <linux/interrupt.h>
 #include <linux/slab.h>
@@ -130,6 +132,13 @@ static void remove_phantom_keys(struct gpio_kp *kp)
 	}
 }
 
+#ifdef CONFIG_MACH_DOUBLESHOT
+static unsigned short last_pressed = 0;
+static int press_time_init = 0;
+static unsigned long last_pressed_time;
+static unsigned long BETWEEN_PRESS_MIN_DIFF = 20;
+#endif
+
 static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 {
 	struct gpio_event_matrix_info *mi = kp->keypad_info;
@@ -157,10 +166,40 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
 			if (!mi->info.oj_btn || keycode != BTN_MOUSE) {
 #endif
-				input_report_key(kp->input_devs->dev[dev], keycode, pressed);
+				int report = 1;
 #ifdef CONFIG_MACH_DOUBLESHOT
-				input_sync(kp->input_devs->dev[dev]);
+				// fix for the all too often happening accidental key press repetitions
+				if (pressed)
+				{
+					if (keycode == last_pressed)
+					{
+						if (press_time_init == 0)
+						{
+							press_time_init = 1;
+							last_pressed_time = jiffies;
+						} else
+						{
+							if ( time_before( jiffies, last_pressed_time + BETWEEN_PRESS_MIN_DIFF ) )
+							{
+								report = 0; // too close
+							} else
+							{
+							    last_pressed_time = jiffies;
+							}
+						}
+					} else
+					{
+						last_pressed_time = jiffies;
+					}
+					last_pressed = keycode;
+				}
 #endif
+				if (report) {
+					input_report_key(kp->input_devs->dev[dev], keycode, pressed);
+#ifdef CONFIG_MACH_DOUBLESHOT
+					input_sync(kp->input_devs->dev[dev]);
+#endif
+				}
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
 			}
 #endif
