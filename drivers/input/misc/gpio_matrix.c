@@ -149,6 +149,7 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
 	static unsigned need_send_spec_key = 1;
 #endif
+	int report;
 
 	if (pressed != test_bit(keycode, kp->input_devs->dev[dev]->key)) {
 		if (keycode == KEY_RESERVED) {
@@ -166,7 +167,7 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 #ifdef CONFIG_OPTICALJOYSTICK_CRUCIAL
 			if (!mi->info.oj_btn || keycode != BTN_MOUSE) {
 #endif
-				int report = 1;
+				report = 1;
 #ifdef CONFIG_MACH_DOUBLESHOT
 				// fix for the all too often happening accidental key press repetitions
 				if (pressed)
