@@ -1368,6 +1368,7 @@ static void hci_cs_le_create_conn(struct hci_dev *hdev, __u8 status)
 {
 	struct hci_cp_le_create_conn *cp;
 	struct hci_conn *conn;
+	unsigned long exp = msecs_to_jiffies(5000);
 
 	BT_DBG("%s status 0x%x", hdev->name, status);
 
@@ -1396,11 +1397,11 @@ static void hci_cs_le_create_conn(struct hci_dev *hdev, __u8 status)
 				conn->out = 1;
 			else
 				BT_ERR("No memory for new connection");
-		}
+		} else
+			exp = msecs_to_jiffies(conn->conn_timeout * 1000);
 
-		if (conn)
-			mod_timer(&conn->disc_timer,
-					jiffies + msecs_to_jiffies(5000));
+		if (conn && exp)
+			mod_timer(&conn->disc_timer, jiffies + exp);
 	}
 
 	hci_dev_unlock(hdev);
@@ -1910,8 +1911,25 @@ static inline void hci_encrypt_change_evt(struct hci_dev *hdev, struct sk_buff *
 
 			hci_proto_connect_cfm(conn, ev->status);
 			hci_conn_put(conn);
-		} else
-			hci_encrypt_cfm(conn, ev->status, ev->encrypt);
+		} else {
+			/*
+			* If the remote device does not support
+			* Pause Encryption, usually during the
+			* roleSwitch we see Encryption disable
+			* for short duration. Allow remote device
+			* to disable encryption
+			* for short duration in this case.
+			*/
+			if ((ev->encrypt == 0) && (ev->status == 0) &&
+				((conn->features[5] & LMP_PAUSE_ENC) == 0)) {
+				mod_timer(&conn->encrypt_pause_timer,
+					jiffies + msecs_to_jiffies(500));
+				BT_INFO("enc pause timer, enc_pend_flag set");
+			} else {
+				del_timer(&conn->encrypt_pause_timer);
+				hci_encrypt_cfm(conn, ev->status, ev->encrypt);
+			}
+		}
 
 		if (test_bit(HCI_MGMT, &hdev->flags))
 			mgmt_encrypt_change(hdev->id, &conn->dst, ev->status);
@@ -1970,6 +1988,9 @@ static inline void hci_remote_features_evt(struct hci_dev *hdev, struct sk_buff 
 		hci_send_cmd(hdev, HCI_OP_READ_REMOTE_EXT_FEATURES,
 							sizeof(cp), &cp);
 		goto unlock;
+	} else  if (!(lmp_ssp_capable(conn)) && conn->auth_initiator &&
+		(conn->pending_sec_level == BT_SECURITY_HIGH)) {
+		conn->pending_sec_level = BT_SECURITY_MEDIUM;
 	}
 
 	if (!ev->status) {
@@ -2770,6 +2791,12 @@ static inline void hci_remote_ext_features_evt(struct hci_dev *hdev, struct sk_b
 		if (!conn->ssp_mode && conn->auth_initiator &&
 			(conn->pending_sec_level == BT_SECURITY_HIGH))
 			conn->pending_sec_level = BT_SECURITY_MEDIUM;
+
+		if (conn->ssp_mode && conn->auth_initiator &&
+			conn->io_capability != 0x03) {
+			conn->pending_sec_level = BT_SECURITY_HIGH;
+			conn->auth_type = HCI_AT_DEDICATED_BONDING_MITM;
+		}
 	}
 
 	if (conn->state != BT_CONFIG)

@@ -161,9 +161,6 @@ struct mgmt_cp_set_io_capability {
 struct mgmt_cp_pair_device {
 	bdaddr_t bdaddr;
 	__u8 io_cap;
-#ifndef CONFIG_MACH_DOUBLESHOT
-	__u8 ssp_cap;
-#endif
 } __packed;
 struct mgmt_rp_pair_device {
 	bdaddr_t bdaddr;

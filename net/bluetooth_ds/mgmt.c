@@ -1353,20 +1353,23 @@ static int encrypt_link(struct sock *sk, u16 index, unsigned char *data,
 	if (!hdev)
 		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENODEV);
 
-	hci_dev_lock(hdev);
+	hci_dev_lock_bh(hdev);
 
 	if (!test_bit(HCI_UP, &hdev->flags)) {
 		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENETDOWN);
-		goto failed;
+		goto done;
 	}
 
-	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK,
-					&cp->bdaddr);
-	if (!conn)
-		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENOTCONN);
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &cp->bdaddr);
+	if (!conn) {
+		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENOTCONN);
+		goto done;
+	}
 
-	if (test_and_set_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend))
-		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, EINPROGRESS);
+	if (test_and_set_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
+		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, EINPROGRESS);
+		goto done;
+	}
 
 	if (conn->link_mode & HCI_LM_AUTH) {
 		enc.handle = cpu_to_le16(conn->handle);
@@ -1383,8 +1386,8 @@ static int encrypt_link(struct sock *sk, u16 index, unsigned char *data,
 		}
 	}
 
-failed:
-	hci_dev_unlock(hdev);
+done:
+	hci_dev_unlock_bh(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -1614,18 +1617,14 @@ static int pair_device(struct sock *sk, u16 index, unsigned char *data, u16 len)
 	hci_dev_lock_bh(hdev);
 
 	io_cap = cp->io_cap;
-	if (io_cap == 0x03) {
-		sec_level = BT_SECURITY_MEDIUM;
-		auth_type = HCI_AT_DEDICATED_BONDING;
-	} else {
-		sec_level = BT_SECURITY_HIGH;
-		auth_type = HCI_AT_DEDICATED_BONDING_MITM;
-	}
+
+	sec_level = BT_SECURITY_MEDIUM;
+	auth_type = HCI_AT_DEDICATED_BONDING;
 
 	entry = hci_find_adv_entry(hdev, &cp->bdaddr);
 	if (entry && entry->flags & 0x04) {
-		conn = hci_connect(hdev, LE_LINK, 0, &cp->bdaddr, sec_level,
-								auth_type);
+		conn = hci_le_connect(hdev, 0, &cp->bdaddr, sec_level,
+							auth_type, NULL);
 	} else {
 		/* ACL-SSP does not support io_cap 0x04 (KeyboadDisplay) */
 		if (io_cap == 0x04)
@@ -1827,7 +1826,7 @@ static int set_rssi_reporter(struct sock *sk, u16 index,
 		return cmd_status(sk, index, MGMT_OP_SET_RSSI_REPORTER,
 							ENODEV);
 
-	hci_dev_lock(hdev);
+	hci_dev_lock_bh(hdev);
 
 	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &cp->bdaddr);
 
@@ -1842,7 +1841,7 @@ static int set_rssi_reporter(struct sock *sk, u16 index,
 			__le16_to_cpu(cp->interval), cp->updateOnThreshExceed);
 
 failed:
-	hci_dev_unlock(hdev);
+	hci_dev_unlock_bh(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -1866,7 +1865,7 @@ static int unset_rssi_reporter(struct sock *sk, u16 index,
 		return cmd_status(sk, index, MGMT_OP_UNSET_RSSI_REPORTER,
 					ENODEV);
 
-	hci_dev_lock(hdev);
+	hci_dev_lock_bh(hdev);
 
 	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &cp->bdaddr);
 
@@ -1879,7 +1878,7 @@ static int unset_rssi_reporter(struct sock *sk, u16 index,
 	hci_conn_unset_rssi_reporter(conn);
 
 failed:
-	hci_dev_unlock(hdev);
+	hci_dev_unlock_bh(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -2753,8 +2752,11 @@ int mgmt_user_confirm_request(u16 index, u8 event,
 	if ((conn->auth_type & HCI_AT_DEDICATED_BONDING) &&
 			conn->auth_initiator && rem_cap == 0x03)
 		ev.auto_confirm = 1;
-	else if (loc_cap == 0x01 && (rem_cap == 0x00 || rem_cap == 0x03))
+	else if (loc_cap == 0x01 && (rem_cap == 0x00 || rem_cap == 0x03)) {
+		if (!loc_mitm && !rem_mitm)
+			value = 0;
 		goto no_auto_confirm;
+	}
 
 
 	if ((!loc_mitm || rem_cap == 0x03) && (!rem_mitm || loc_cap == 0x03))
@@ -2918,7 +2920,7 @@ void mgmt_read_rssi_complete(u16 index, s8 rssi, bdaddr_t *bdaddr,
 
 	if (conn->rssi_update_thresh_exceed == 1) {
 		BT_DBG("rssi_update_thresh_exceed == 1");
-		if (rssi >= conn->rssi_threshold) {
+		if (rssi > conn->rssi_threshold) {
 			memset(&ev, 0, sizeof(ev));
 			bacpy(&ev.bdaddr, bdaddr);
 			ev.rssi = rssi;
@@ -2931,7 +2933,7 @@ void mgmt_read_rssi_complete(u16 index, s8 rssi, bdaddr_t *bdaddr,
 		}
 	} else {
 		BT_DBG("rssi_update_thresh_exceed == 0");
-		if (rssi <= conn->rssi_threshold) {
+		if (rssi < conn->rssi_threshold) {
 			memset(&ev, 0, sizeof(ev));
 			bacpy(&ev.bdaddr, bdaddr);
 			ev.rssi = rssi;
