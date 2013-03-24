@@ -30,6 +30,17 @@
 #include <media/msm_camera-8x60.h>
 #include <media/msm_camera_sensor.h>
 
+
+#ifdef CONFIG_DS_MSM_CAMERA_DEBUG
+#define CONFIG_MSM_CAMERA_DEBUG
+#endif
+#ifdef CONFIG_DS_CAMERA_ZSL
+#define CONFIG_CAMERA_ZSL
+#endif
+#ifdef CONFIG_DS_MSM_CAMERA_FLASH
+#define CONFIG_MSM_CAMERA_FLASH
+#endif
+
 #ifdef CONFIG_MSM_CAMERA_DEBUG
 #define CDBG(fmt, args...) pr_info(fmt, ##args)
 #else

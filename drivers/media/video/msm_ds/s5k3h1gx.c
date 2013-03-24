@@ -55,6 +55,20 @@
  *
  */
 
+#ifdef CONFIG_DS_MSM_CAMERA_DEBUG
+#define CONFIG_MSM_CAMERA_DEBUG
+#endif
+#ifdef CONFIG_DS_CAMERA_ZSL
+#define CONFIG_CAMERA_ZSL
+#endif
+#ifdef CONFIG_DS_MSM_CAMERA_FLASH
+#define CONFIG_MSM_CAMERA_FLASH
+#endif
+#ifdef CONFIG_DS_MSM_CAMERA_8X60
+#define CONFIG_MSM_CAMERA_8X60
+#endif
+
+
 #include <linux/delay.h>
 #include <linux/types.h>
 #include <linux/i2c.h>

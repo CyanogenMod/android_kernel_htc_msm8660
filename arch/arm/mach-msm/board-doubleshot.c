@@ -1632,7 +1632,7 @@ static struct platform_device msm_camera_sensor_imx105 = {
 	},
 };
 
-#ifdef CONFIG_S5K3H2YX
+#ifdef CONFIG_DS_S5K3H2YX
 static struct msm_camera_sensor_flash_data flash_s5k3h2yx = {
 	.flash_type = MSM_CAMERA_FLASH_LED,
 	.flash_src = &msm_flash_src
@@ -1697,42 +1697,42 @@ static void __init msm8x60_init_camera(void)
 }
 
 static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
-	#ifdef CONFIG_MT9E013
+	#ifdef CONFIG_DS_MT9E013
 	{
 		I2C_BOARD_INFO("mt9e013", 0x6C >> 2),
 	},
 	#endif
-	#ifdef CONFIG_IMX074
+	#ifdef CONFIG_DS_IMX074
 	{
 		I2C_BOARD_INFO("imx074", 0x1A),
 	},
 	#endif
-	#ifdef CONFIG_WEBCAM_OV7692
+	#ifdef CONFIG_DS_WEBCAM_OV7692
 	{
 		I2C_BOARD_INFO("ov7692", 0x78),
 	},
 	#endif
-	#ifdef CONFIG_WEBCAM_OV9726
+	#ifdef CONFIG_DS_WEBCAM_OV9726
 	{
 		I2C_BOARD_INFO("ov9726", 0x10),
 	},
 	#endif
-	#ifdef CONFIG_QS_S5K4E1
+	#ifdef CONFIG_DS_QS_S5K4E1
 	{
 		I2C_BOARD_INFO("qs_s5k4e1", 0x20),
 	},
 	#endif
-	#ifdef CONFIG_S5K3H2YX
+	#ifdef CONFIG_DS_S5K3H2YX
 	{
 		I2C_BOARD_INFO("s5k3h2yx", 0x20 >> 1),
 	},
 	#endif
-	#ifdef CONFIG_IMX105
+	#ifdef CONFIG_DS_IMX105
 	{
 		I2C_BOARD_INFO("imx105", 0x1A >> 1),
 	},
 	#endif
-	#ifdef CONFIG_MT9V113
+	#ifdef CONFIG_DS_MT9V113
 	{
 		I2C_BOARD_INFO("mt9v113", 0x3C),
 	},
@@ -3383,20 +3383,20 @@ static struct platform_device *doubleshot_devices[] __initdata = {
 	&msm_kgsl_3d0,
 	&msm_kgsl_2d0,
 	&msm_kgsl_2d1,
-#ifdef CONFIG_MSM_CAMERA
-#ifdef CONFIG_IMX105
+#ifdef CONFIG_DS_MSM_CAMERA
+#ifdef CONFIG_DS_IMX105
 	&msm_camera_sensor_imx105,
 #endif
-#ifdef CONFIG_S5K3H2YX
+#ifdef CONFIG_DS_S5K3H2YX
 	&msm_camera_sensor_s5k3h2yx,
 #endif
 	&msm_camera_sensor_webcam,
 
 #endif
-#ifdef CONFIG_MSM_GEMINI
+#ifdef CONFIG_DS_MSM_GEMINI
 	&msm_gemini_device,
 #endif
-#ifdef CONFIG_MSM_VPE
+#ifdef CONFIG_DS_MSM_VPE
 	&msm_vpe_device,
 #endif
 

@@ -333,6 +333,9 @@ struct msm_camera_cfg_cmd {
 #ifdef CONFIG_CAMERA_ZSL
 #define CMD_AXI_CFG_ZSL 45
 #endif
+#ifdef CONFIG_DS_CAMERA_ZSL
+#define CMD_AXI_CFG_ZSL 45
+#endif
 
 /* vfe config command: config command(from config thread)*/
 struct msm_vfe_cfg_cmd {

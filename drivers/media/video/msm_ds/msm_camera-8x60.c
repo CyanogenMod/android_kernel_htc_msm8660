@@ -23,6 +23,17 @@
 /* FIXME: check limits on command lenghts passed from userspace */
 /* FIXME: __msm_release: which queues should we flush when opencnt != 0 */
 
+#ifdef CONFIG_DS_MSM_CAMERA_DEBUG
+#define CONFIG_MSM_CAMERA_DEBUG
+#endif
+#ifdef CONFIG_DS_CAMERA_ZSL
+#define CONFIG_CAMERA_ZSL
+#endif
+#ifdef CONFIG_DS_MSM_CAMERA_FLASH
+#define CONFIG_MSM_CAMERA_FLASH
+#endif
+
+
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
