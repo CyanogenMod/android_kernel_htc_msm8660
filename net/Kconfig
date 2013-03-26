@@ -312,12 +312,7 @@ endmenu
 source "net/ax25/Kconfig"
 source "net/can/Kconfig"
 source "net/irda/Kconfig"
-if MACH_DOUBLESHOT
-source "net/bluetooth_ds/Kconfig"
-endif
-if !MACH_DOUBLESHOT
 source "net/bluetooth/Kconfig"
-endif
 source "net/rxrpc/Kconfig"
 
 config FIB_RULES
