@@ -86,7 +86,6 @@ enum {
 	HCI_SERVICE_CACHE,
 	HCI_LINK_KEYS,
 	HCI_DEBUG_KEYS,
-	HCI_UNREGISTER,
 
 	HCI_RESET,
 };
@@ -868,6 +867,17 @@ struct hci_rp_read_data_block_size {
 	__le16   max_acl_len;
 	__le16   data_block_len;
 	__le16   num_blocks;
+} __packed;
+
+#define HCI_OP_READ_RSSI	0x1405
+struct hci_cp_read_rssi {
+	__le16   handle;
+} __packed;
+
+struct hci_rp_read_rssi {
+	__u8     status;
+	__le16   handle;
+	__s8     rssi;
 } __packed;
 
 #define HCI_OP_READ_LOCAL_AMP_INFO	0x1409
