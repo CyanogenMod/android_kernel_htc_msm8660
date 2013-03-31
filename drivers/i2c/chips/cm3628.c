@@ -468,52 +468,36 @@ static void enable_als_int(void)/*enable als interrupt*/
 static void report_lsensor_input_event(struct cm3628_info *lpi, bool resume)
 {/*when resume need report a data, so the paramerter need to quick reponse*/
 	uint16_t adc_value = 0;
-	int level = 0, i, ret = 0;
+	int level = 0, ret = 0, cali_value;
 
 	mutex_lock(&als_get_adc_mutex);
 
 	ret = get_ls_adc_value(&adc_value, resume);
 	if (resume)
-		adc_value = adc_value*8;/*because the CM3628_ALS_IT for 400ms - >50ms*/
+		adc_value = adc_value<<3;/*because the CM3628_ALS_IT for 400ms - >50ms*/
+	cali_value = lpi->ls_calibrate ? adc_value * lpi->als_kadc / lpi->als_gadc : adc_value;
+	cali_value >>= 2;/*adjust value to better match real Lux value*/
 
-	for (i = 0; i < 10; i++) {
-		if (adc_value <= (*(lpi->adc_table + i))) {
-			level = i;
-			if (*(lpi->adc_table + i))
-				break;
-		}
-		if (i == 9) {/*avoid  i = 10, because 'cali_table' of size is 10 */
-			level = i;
-			break;
-		}
-	}
-	ret = set_lsensor_range(((i == 0) || (adc_value == 0)) ? 0 :
-			*(lpi->cali_table + (i - 1)) + 1,
-		*(lpi->cali_table + i));
+	ret = set_lsensor_range(adc_value * 10 / 12, adc_value * 12 / 10);/*trigger IRQ on +/- 20% light level change*/
 
 	if (ret < 0)
 		printk(KERN_ERR "[LS][CM3628 error] %s fail\n", __func__);
 
-	if ((i == 0) || (adc_value == 0))
-		D("[LS][CM3628] %s: ADC=0x%03X, Level=%d, l_thd equal 0, h_thd = 0x%x \n",
-			__func__, adc_value, level, *(lpi->cali_table + i));
-	else
-		D("[LS][CM3628] %s: ADC=0x%03X, Level=%d, l_thd = 0x%x, h_thd = 0x%x \n",
-			__func__, adc_value, level, *(lpi->cali_table + (i - 1)) + 1, *(lpi->cali_table + i));
-
-	lpi->current_level = level;
+	D("[LS][CM3628] %s: ADC=0x%03X, Level=%d, l_thd = 0x%x, h_thd = 0x%x \n",
+			__func__, adc_value, cali_value, adc_value * 10 / 12, adc_value * 12 / 10);
+	lpi->current_level = cali_value;
 	lpi->current_adc = adc_value;
 	/*D("[CM3628] %s: *(lpi->cali_table + (i - 1)) + 1 = 0x%X, *(lpi->cali_table + i) = 0x%x \n", __func__, *(lpi->cali_table + (i - 1)) + 1, *(lpi->cali_table + i));*/
-	if (fLevel >= 0) {
-		D("[LS][CM3628] L-sensor force level enable level=%d fLevel=%d\n",
-			level, fLevel);
-		level = fLevel;
+	if(fLevel>=0){
+		D("[LS][CM3628] L-sensor force level enable level=%d fLevel=%d\n",level,fLevel);
+		level=fLevel;
 	}
-	input_report_abs(lpi->ls_input_dev, ABS_MISC, level);
-	input_sync(lpi->ls_input_dev);
+	if ((!resume) || (cali_value == 0)) {
+		input_report_abs(lpi->ls_input_dev, ABS_MISC, cali_value);
+		input_sync(lpi->ls_input_dev);
+	}
 	enable_als_int();
 	mutex_unlock(&als_get_adc_mutex);
-
 }
 
 void enable_ps_int(int cmd_value)
@@ -994,6 +978,7 @@ static int lightsensor_enable(struct cm3628_info *lpi)
 {
 	int ret = 0;
 	uint8_t cmd = 0;
+  uint16_t bogus = 0;
 
 	mutex_lock(&als_enable_mutex);
 	D("[LS][CM3628] %s\n", __func__);
@@ -1012,6 +997,7 @@ static int lightsensor_enable(struct cm3628_info *lpi)
 		*/
 		input_report_abs(lpi->ls_input_dev, ABS_MISC, -1);
 		input_sync(lpi->ls_input_dev);
+		get_ls_adc_value(&bogus, 1);/*ignore first ADC value*/
 		report_lsensor_input_event(lpi, 1);/*resume, IOCTL and DEVICE_ATTR*/
 	}
 
@@ -1691,7 +1677,7 @@ static int lightsensor_setup(struct cm3628_info *lpi)
 	}
 	lpi->ls_input_dev->name = "lightsensor-level";
 	set_bit(EV_ABS, lpi->ls_input_dev->evbit);
-	input_set_abs_params(lpi->ls_input_dev, ABS_MISC, 0, 9, 0, 0);
+	input_set_abs_params(lpi->ls_input_dev, ABS_MISC, 0, 0xffff, 0, 0);
 
 	ret = input_register_device(lpi->ls_input_dev);
 	if (ret < 0) {
