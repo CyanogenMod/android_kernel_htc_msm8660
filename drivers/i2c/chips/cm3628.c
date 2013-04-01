@@ -465,6 +465,8 @@ static void enable_als_int(void)/*enable als interrupt*/
 		lpi->als_enable = 1;
 }
 
+static int last_non_negative_value = 0;
+
 static void report_lsensor_input_event(struct cm3628_info *lpi, bool resume)
 {/*when resume need report a data, so the paramerter need to quick reponse*/
 	uint16_t adc_value = 0;
@@ -492,7 +494,15 @@ static void report_lsensor_input_event(struct cm3628_info *lpi, bool resume)
 		D("[LS][CM3628] L-sensor force level enable level=%d fLevel=%d\n",level,fLevel);
 		level=fLevel;
 	}
-	if ((!resume) || (cali_value == 0)) {
+	//if ((!resume) || (cali_value == 0)) // removing this, as it caused the ABS_MISC to get stuck at -1 on resuming from powersave
+	{
+		if (cali_value<0)
+		{
+			cali_value = last_non_negative_value;
+		} else
+		{
+			last_non_negative_value = cali_value;
+		}
 		input_report_abs(lpi->ls_input_dev, ABS_MISC, cali_value);
 		input_sync(lpi->ls_input_dev);
 	}
