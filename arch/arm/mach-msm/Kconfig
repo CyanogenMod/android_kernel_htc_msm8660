@@ -2403,3 +2403,9 @@ config HTC_ACCESSORY_ONEWIRE
         help
           Provides support of HTC one wire protocol driver.
 endif
+
+config OVERCLOCKING
+	bool "Enable setting core clocks up to 1.5GHz"
+	default n
+	help
+	  Enable support for overclocking the core up to 1.5GHz.

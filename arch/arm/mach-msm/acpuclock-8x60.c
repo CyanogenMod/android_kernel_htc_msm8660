@@ -105,7 +105,7 @@
 /* PTE EFUSE register. */
 #define QFPROM_PTE_EFUSE_ADDR		(MSM_QFPROM_BASE + 0x00C0)
 
-#ifdef CONFIG_MACH_DOUBLESHOT
+#ifdef CONFIG_OVERCLOCKING
 #define FREQ_TABLE_SIZE			34
 #else
 #define FREQ_TABLE_SIZE			30
@@ -183,7 +183,7 @@ struct clkctl_acpu_speed {
 static struct msm_bus_paths bw_level_tbl[] = {
 	[0] =  BW_MBPS(824), /* At least 103 MHz on bus. */
 	[1] = BW_MBPS(1336), /* At least 167 MHz on bus. */
-#ifdef CONFIG_MACH_DOUBLESHOT
+#ifdef CONFIG_OVERCLOCKING
 	[2] = BW_MBPS(2008), /* At least 251 MHz on bus. */
 	[3] = BW_MBPS(2720), /* At least 340 MHz on bus. */
 	[4] = BW_MBPS(3600), /* At least 450 MHz on bus. */
@@ -224,7 +224,7 @@ static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 	[17] = {1296000,  1, 0x18, 1200000, 1225000, 3},
 	[18] = {1350000,  1, 0x19, 1200000, 1225000, 3},
 	[19] = {1404000,  1, 0x1A, 1200000, 1250000, 3},
-#ifdef CONFIG_MACH_DOUBLESHOT
+#ifdef CONFIG_OVERCLOCKING
 	[20] = {1458000,  1, 0x1B, 1200000, 1250000, 4},
 	[21] = {1512000,  1, 0x1C, 1200000, 1250000, 4},
 	[22] = {1566000,  1, 0x1D, 1200000, 1250000, 4},
@@ -232,7 +232,7 @@ static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 };
 
 #define L2(x) (&l2_freq_tbl_v2[(x)])
-#ifndef CONFIG_MACH_DOUBLESHOT
+#ifndef CONFIG_OVERCLOCKING
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
 static struct clkctl_acpu_speed acpu_freq_tbl_1188mhz[] = {
   { {1, 1},  192000,  ACPU_PLL_8, 3, 1, 0, 0,    L2(1),   812500, 0x03006000},
@@ -391,7 +391,7 @@ static struct clkctl_acpu_speed acpu_freq_tbl_nom[] = {
 #endif
 
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
-#ifdef CONFIG_MACH_DOUBLESHOT
+#ifdef CONFIG_OVERCLOCKING
 static struct clkctl_acpu_speed acpu_freq_tbl_fast[] = {
   { {1, 1},  96000,  ACPU_PLL_8, 3, 1, 0, 0,    L2(1),   400000, 0x03006000},
   /* MAX_AXI row is used to source CPU cores and L2 from the AFAB clock. */
@@ -1033,7 +1033,7 @@ static __init struct clkctl_acpu_speed *select_freq_plan(void)
 	if (pvs == 0x7)
 		pvs = (pte_efuse >> 13) & 0x7;
 
-#ifdef CONFIG_MACH_DOUBLESHOT
+#ifdef CONFIG_OVERCLOCKING
 	/* match max OC allowable */
 	max_khz = 1512000; //1728000;
 	/* set everything to default to freq fast table regardless of efuse reading */
