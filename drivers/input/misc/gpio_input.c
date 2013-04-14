@@ -267,7 +267,7 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 static unsigned short last_pressed = 0;
 static int press_time_init = 0;
 static unsigned long last_pressed_time;
-static unsigned long BETWEEN_PRESS_MIN_DIFF = 20;
+static unsigned long BETWEEN_PRESS_MIN_DIFF = 25;
 
 void keypad_report_keycode(struct gpio_key_state *ks)
 {
