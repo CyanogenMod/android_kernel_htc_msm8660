@@ -267,7 +267,7 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 static unsigned short last_pressed = 0;
 static int press_time_init = 0;
 static unsigned long last_pressed_time;
-static unsigned long BETWEEN_PRESS_MIN_DIFF = 25;
+static unsigned long BETWEEN_PRESS_MIN_DIFF = 30;
 
 void keypad_report_keycode(struct gpio_key_state *ks)
 {
@@ -323,6 +323,15 @@ void keypad_report_keycode(struct gpio_key_state *ks)
 			last_pressed_time = jiffies;
 		}
 		last_pressed = key_entry->code;
+	} else
+	{
+		// if power key is released still start counting last_pressed_time
+		// for the long power menu not going screen off
+		if (key_entry->code == KEY_POWER)
+		{
+			last_pressed_time = jiffies;
+			last_pressed = key_entry->code;
+		}
 	}
 
 	if (report) 
