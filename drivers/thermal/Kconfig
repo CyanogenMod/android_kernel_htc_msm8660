@@ -101,9 +101,3 @@ config THERMAL_PM8XXX
 	  Enabling the thermal zone device via the mode file results in
 	  shifting over temperature shutdown control of the PMIC from hardware
 	  to software.
-
-config THERMAL_MONITOR
-	tristate "Thermal monitor and throttling for MSM8X60"
-	depends on THERMAL
-	help
-	  Enable thermal throttling for cpu.
