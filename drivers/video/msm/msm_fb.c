@@ -1380,7 +1380,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 					      bpp);
 	/* calculate smem_len based on max size of two supplied modes */
 	fix->smem_len = roundup(MAX(msm_fb_line_length(mfd->index,
-					       ALIGN(panel_info->xres, 32),
+					       panel_info->xres,
 					       bpp) *
 			    panel_info->yres * mfd->fb_page,
 			    msm_fb_line_length(mfd->index,
@@ -1390,7 +1390,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 
 #if (defined(CONFIG_USB_FUNCTION_PROJECTOR) || defined(CONFIG_USB_ANDROID_PROJECTOR))
 	if (mfd->index == 0) {
-		msm_fb_data.xres = ALIGN(panel_info->xres, 32);
+		msm_fb_data.xres = panel_info->xres;
 		msm_fb_data.yres = panel_info->yres;
 	}
 #endif
