@@ -384,6 +384,8 @@ void ddl_release_client_internal_buffers(struct ddl_client_context *ddl)
 		encoder->dynamic_prop_change = 0;
 		ddl_free_enc_hw_buffers(ddl);
 	}
+	ddl_pmem_free(&ddl->shared_mem[0]);
+	ddl_pmem_free(&ddl->shared_mem[1]);
 }
 
 u32 ddl_codec_type_transact(struct ddl_client_context *ddl,
@@ -1026,7 +1028,8 @@ u32 ddl_check_reconfig(struct ddl_client_context *ddl)
 			(decoder->frame_size.scan_lines ==
 			decoder->client_frame_size.scan_lines) &&
 			(decoder->frame_size.stride ==
-			decoder->client_frame_size.stride))
+			decoder->client_frame_size.stride) &&
+			decoder->progressive_only)
 				need_reconfig = false;
 	}
 	return need_reconfig;
